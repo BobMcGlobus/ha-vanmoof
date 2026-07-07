@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Secrets — never commit real bike credentials
+scratch_probe.py
+secrets.*
+*.local
+
+# macOS
+.DS_Store
+
+# Claude
+.claude/settings.local.json
