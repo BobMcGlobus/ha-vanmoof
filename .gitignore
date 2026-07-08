@@ -8,6 +8,7 @@ venv/
 # Secrets / throwaway helpers — never commit real bike credentials or key output
 scratch_probe.py
 get_keys.py
+raw_dump.py
 secrets.*
 *.local
 

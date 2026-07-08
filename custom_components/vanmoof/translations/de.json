@@ -80,6 +80,11 @@
       "in_range": {
         "name": "In Reichweite"
       }
+    },
+    "sensor": {
+      "frame_number": {
+        "name": "Rahmennummer"
+      }
     }
   }
 }

@@ -28,4 +28,7 @@ class VanMoofEntity(CoordinatorEntity[VanMoofCoordinator]):
             # Use the entry title so multiple bikes get distinct device names
             # (e.g. "ES3-F88A", "Fahrrad Lol") instead of all being "VanMoof".
             name=coordinator.entry.title,
+            serial_number=(
+                coordinator.data.frame_number if coordinator.data else None
+            ),
         )

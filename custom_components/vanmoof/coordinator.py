@@ -52,6 +52,7 @@ class VanMoofData:
     distance_km: float
     speed_kmh: int
     lock_state: LockState
+    frame_number: str
 
 
 class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
@@ -124,10 +125,12 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
 
     async def _read_all(self, sx3: SX3Client) -> VanMoofData:
         return VanMoofData(
+            # NOTE: get_battery_level() reads the motor/main battery.
             battery=await sx3.get_battery_level(),
             distance_km=await sx3.get_distance_travelled(),
             speed_kmh=await sx3.get_speed(),
             lock_state=await sx3.get_lock_state(),
+            frame_number=await sx3.get_frame_number(),
         )
 
     async def async_set_lock(self, *, locked: bool) -> None:

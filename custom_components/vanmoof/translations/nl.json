@@ -80,6 +80,11 @@
       "in_range": {
         "name": "In bereik"
       }
+    },
+    "sensor": {
+      "frame_number": {
+        "name": "Framenummer"
+      }
     }
   }
 }

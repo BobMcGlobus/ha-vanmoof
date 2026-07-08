@@ -80,6 +80,11 @@
       "in_range": {
         "name": "In range"
       }
+    },
+    "sensor": {
+      "frame_number": {
+        "name": "Frame number"
+      }
     }
   }
 }
