@@ -50,6 +50,15 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         value_fn=lambda data: data.speed_kmh,
     ),
     VanMoofSensorDescription(
+        key="module_battery",
+        translation_key="module_battery",
+        device_class=SensorDeviceClass.BATTERY,
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        value_fn=lambda data: data.module_battery,
+    ),
+    VanMoofSensorDescription(
         key="frame_number",
         translation_key="frame_number",
         entity_category=EntityCategory.DIAGNOSTIC,

@@ -46,13 +46,21 @@ type VanMoofConfigEntry = ConfigEntry[VanMoofCoordinator]
 
 @dataclass
 class VanMoofData:
-    """Snapshot of bike state from one poll."""
+    """Snapshot of bike state from one poll.
+
+    Core fields always come from a successful poll. The rest are best-effort:
+    some characteristics (e.g. FRAME_NUMBER on certain firmware) return
+    "Invalid Handle", so a failing optional read must not fail the whole poll.
+    """
 
     battery: int
     distance_km: float
     speed_kmh: int
     lock_state: LockState
-    frame_number: str
+    frame_number: str | None = None
+    module_battery: int | None = None
+    bike_firmware: str | None = None
+    has_error: bool = False
 
 
 class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
@@ -124,14 +132,34 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             await client.disconnect()
 
     async def _read_all(self, sx3: SX3Client) -> VanMoofData:
-        return VanMoofData(
-            # NOTE: get_battery_level() reads the motor/main battery.
+        # Core reads define success; if these fail it's a real error (surfaced
+        # by _with_client as UpdateFailed / reauth).
+        # NOTE: get_battery_level() reads the motor/main battery.
+        data = VanMoofData(
             battery=await sx3.get_battery_level(),
             distance_km=await sx3.get_distance_travelled(),
             speed_kmh=await sx3.get_speed(),
             lock_state=await sx3.get_lock_state(),
-            frame_number=await sx3.get_frame_number(),
         )
+        # Optional reads: best-effort, never fail the poll (some characteristics
+        # return "Invalid Handle" on certain firmware).
+        data.frame_number = await self._try_read(sx3.get_frame_number)
+        data.module_battery = await self._try_read(sx3.get_module_battery_level)
+        data.bike_firmware = await self._try_read(sx3.get_bike_firmware_version)
+        errors = await self._try_read(sx3.get_errors)
+        data.has_error = bool(errors and any(errors))
+        return data
+
+    async def _try_read(
+        self, read: Callable[[], Awaitable[_T]]
+    ) -> _T | None:
+        """Run an optional read; swallow failures so one bad characteristic
+        doesn't fail the whole poll."""
+        try:
+            return await read()
+        except Exception as err:  # noqa: BLE001 - optional, best-effort
+            _LOGGER.debug("optional read %s failed: %s", read.__name__, err)
+            return None
 
     async def async_set_lock(self, *, locked: bool) -> None:
         """Set lock state, then refresh so the lock entity reflects reality."""

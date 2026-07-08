@@ -79,11 +79,17 @@
     "binary_sensor": {
       "in_range": {
         "name": "In range"
+      },
+      "problem": {
+        "name": "Problem"
       }
     },
     "sensor": {
       "frame_number": {
         "name": "Frame number"
+      },
+      "module_battery": {
+        "name": "Module battery"
       }
     }
   }

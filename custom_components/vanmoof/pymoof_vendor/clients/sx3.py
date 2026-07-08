@@ -313,3 +313,25 @@ class SX3Client:
             self._bike_profile.Movement.SPEED,
         )
         return result
+
+    # --- ha-vanmoof additions (re-add after re-vendoring pymoof) -------------
+
+    async def get_module_battery_level(self) -> int:
+        """Battery % of the internal module/anti-theft battery (0-100)."""
+        result = await self._read(
+            self._bike_profile.BikeInfo.MODULE_BATTERY_LEVEL,
+        )
+        return int(result[0])
+
+    async def get_errors(self) -> bytes:
+        """Decrypted error field; all-zero means no error."""
+        return await self._read(
+            self._bike_profile.BikeState.ERRORS,
+        )
+
+    async def get_bike_firmware_version(self) -> str:
+        """Bike firmware version string, e.g. '1.09.03'."""
+        result = await self._read(
+            self._bike_profile.BikeInfo.BIKE_FIRMWARE_VERSION,
+        )
+        return result.split(b"\x00", 1)[0].decode("ascii", "replace")

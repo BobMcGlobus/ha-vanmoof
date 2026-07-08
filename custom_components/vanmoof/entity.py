@@ -31,4 +31,7 @@ class VanMoofEntity(CoordinatorEntity[VanMoofCoordinator]):
             serial_number=(
                 coordinator.data.frame_number if coordinator.data else None
             ),
+            sw_version=(
+                coordinator.data.bike_firmware if coordinator.data else None
+            ),
         )

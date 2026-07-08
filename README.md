@@ -9,11 +9,15 @@ bike directly over BLE from Home Assistant — no Pi bridge, no MQTT layer.
 
 It exposes:
 
-- `sensor.*` — battery %, odometer (km, total_increasing), current speed (km/h)
+- `sensor.*` — battery %, odometer (km, total_increasing), current speed (km/h),
+  plus diagnostics: module (anti-theft) battery %, frame number
 - `lock.*` — the bike's digital lock (lock / unlock; locking connects immediately)
 - `binary_sensor.*` — **In range**: passive presence from BLE advertisements
   (any adapter/proxy), so it flips off shortly after the bike leaves range —
   handy for arrival and departure / theft automations, independent of polling.
+  **Problem**: on when the bike reports an error.
+
+Device info carries the frame number (serial) and firmware version.
 
 The **poll interval** is adjustable per bike (integration → *Configure*). A wrong
 encryption key triggers a **re-authentication** prompt instead of a silent retry

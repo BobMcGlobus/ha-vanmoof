@@ -13,12 +13,14 @@ from homeassistant.components.bluetooth import (
     BluetoothScanningMode,
     BluetoothServiceInfoBleak,
 )
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN
 from .coordinator import VanMoofConfigEntry, VanMoofCoordinator
+from .entity import VanMoofEntity
 
 
 async def async_setup_entry(
@@ -26,8 +28,9 @@ async def async_setup_entry(
     entry: VanMoofConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up the VanMoof presence binary sensor."""
-    async_add_entities([VanMoofInRange(entry.runtime_data)])
+    """Set up the VanMoof binary sensors."""
+    coordinator = entry.runtime_data
+    async_add_entities([VanMoofInRange(coordinator), VanMoofProblem(coordinator)])
 
 
 class VanMoofInRange(BinarySensorEntity):
@@ -90,3 +93,21 @@ class VanMoofInRange(BinarySensorEntity):
         if self._attr_is_on is not False:
             self._attr_is_on = False
             self.async_write_ha_state()
+
+
+class VanMoofProblem(VanMoofEntity, BinarySensorEntity):
+    """On when the bike reports a non-zero error field."""
+
+    _attr_translation_key = "problem"
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: VanMoofCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.address}_problem"
+
+    @property
+    def is_on(self) -> bool | None:
+        if (data := self.coordinator.data) is None:
+            return None
+        return data.has_error
