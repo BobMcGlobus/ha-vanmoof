@@ -10,7 +10,7 @@ bike directly over BLE from Home Assistant — no Pi bridge, no MQTT layer.
 It exposes:
 
 - `sensor.*` — battery %, odometer (km, total_increasing), current speed (km/h),
-  plus diagnostics: module (anti-theft) battery %, frame number
+  current gear, plus diagnostics: module (anti-theft) battery %, frame number
 - `lock.*` — the bike's digital lock (lock / unlock; locking connects immediately)
 - `binary_sensor.*` — **In range**: passive presence from BLE advertisements
   (any adapter/proxy), so it flips off shortly after the bike leaves range —
@@ -20,6 +20,7 @@ It exposes:
 
 - `button.*` — **Refresh**: forces an immediate poll instead of waiting for the
   interval (stays pressable even when the bike is currently unavailable).
+  **Bell**: rings the bell/horn (opens a BLE session, so a few seconds' delay).
 
 Device info carries the frame number (serial), model, and firmware version.
 

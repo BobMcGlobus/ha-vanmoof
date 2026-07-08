@@ -33,7 +33,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
 )
-from .pymoof_vendor.clients.sx3 import LockState, SX3Client
+from .pymoof_vendor.clients.sx3 import LockState, Sound, SX3Client
 
 # Escalate to a reauth flow only after this many consecutive failures that
 # happen *after* a successful connection (a genuine bad key keeps failing; a
@@ -65,6 +65,7 @@ class VanMoofData:
     bike_firmware: str | None = None
     has_error: bool = False
     charging: bool | None = None
+    gear: int | None = None
 
 
 class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
@@ -150,6 +151,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         bike_firmware = await self._try_read(sx3.get_bike_firmware_version)
         errors = await self._try_read(sx3.get_errors)
         charging = await self._try_read(sx3.get_motor_battery_state)
+        gear = await self._try_read(sx3.get_gear)
         # Battery last, with a re-read guard: the S3 reports a placeholder 100 %
         # for the first moment after waking, before the BMS reports the real SoC.
         # Reading it after the round-trips above, then re-reading if it's 100,
@@ -169,6 +171,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             bike_firmware=bike_firmware,
             has_error=bool(errors and any(errors)),
             charging=bool(charging) if charging is not None else None,
+            gear=gear,
         )
 
     async def _try_read(
@@ -189,3 +192,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         target = LockState.LOCKED if locked else LockState.UNLOCKED
         await self._with_client(lambda sx3: sx3.set_lock_state(target))
         await self.async_request_refresh()
+
+    async def async_ring_bell(self) -> None:
+        """Ring the bell / horn once (opens a short-lived session to do it)."""
+        await self._with_client(lambda sx3: sx3.play_sound(Sound.HORN_1))

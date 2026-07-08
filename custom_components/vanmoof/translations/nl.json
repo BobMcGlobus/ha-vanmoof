@@ -90,11 +90,17 @@
       },
       "module_battery": {
         "name": "Module-accu"
+      },
+      "gear": {
+        "name": "Versnelling"
       }
     },
     "button": {
       "refresh": {
         "name": "Vernieuwen"
+      },
+      "bell": {
+        "name": "Bel"
       }
     }
   }

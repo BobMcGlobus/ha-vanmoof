@@ -15,8 +15,11 @@ async def async_setup_entry(
     entry: VanMoofConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up the VanMoof refresh button."""
-    async_add_entities([VanMoofRefreshButton(entry.runtime_data)])
+    """Set up the VanMoof buttons."""
+    coordinator = entry.runtime_data
+    async_add_entities(
+        [VanMoofRefreshButton(coordinator), VanMoofBellButton(coordinator)]
+    )
 
 
 class VanMoofRefreshButton(VanMoofEntity, ButtonEntity):
@@ -36,3 +39,17 @@ class VanMoofRefreshButton(VanMoofEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         await self.coordinator.async_request_refresh()
+
+
+class VanMoofBellButton(VanMoofEntity, ButtonEntity):
+    """Ring the bell / horn. Note: opens a BLE session, so there's a few
+    seconds' delay — fine for locating the bike, not for traffic."""
+
+    _attr_translation_key = "bell"
+
+    def __init__(self, coordinator: VanMoofCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.address}_bell"
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_ring_bell()

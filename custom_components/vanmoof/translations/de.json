@@ -90,11 +90,17 @@
       },
       "module_battery": {
         "name": "Modul-Akku"
+      },
+      "gear": {
+        "name": "Gang"
       }
     },
     "button": {
       "refresh": {
         "name": "Aktualisieren"
+      },
+      "bell": {
+        "name": "Klingel"
       }
     }
   }

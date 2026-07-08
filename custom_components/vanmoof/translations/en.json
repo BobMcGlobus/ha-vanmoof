@@ -87,6 +87,9 @@
     "button": {
       "refresh": {
         "name": "Refresh"
+      },
+      "bell": {
+        "name": "Bell"
       }
     },
     "sensor": {
@@ -95,6 +98,9 @@
       },
       "module_battery": {
         "name": "Module battery"
+      },
+      "gear": {
+        "name": "Gear"
       }
     }
   }

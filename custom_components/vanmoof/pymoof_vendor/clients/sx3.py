@@ -336,6 +336,13 @@ class SX3Client:
         )
         return int(result[0])
 
+    async def get_gear(self) -> int:
+        """Currently selected e-shifter gear."""
+        result = await self._read(
+            self._bike_profile.Movement.E_SHIFTER_GEAR,
+        )
+        return int(result[0])
+
     async def get_bike_firmware_version(self) -> str:
         """Bike firmware version string, e.g. '1.09.03'."""
         result = await self._read(
