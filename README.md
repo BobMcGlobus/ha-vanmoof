@@ -40,9 +40,16 @@ The config flow offers two ways. Either way, once set up the integration is
 
 **1. Log in with your VanMoof account (recommended).** Choose *"Log in with my
 VanMoof account"*, enter your VanMoof email + password, and pick the bike. The
-`encryptionKey` and `userKeyId` are read from your account automatically; if the
-account lists the bike's MAC it's matched for you, otherwise you pick the nearby
-device. Credentials are used once and not stored.
+`encryptionKey` and `userKeyId` are read from your account automatically; you
+then pick the bike from the nearby-device list. Credentials are used once and
+not stored.
+
+> The bike must be **in Bluetooth range and awake** during setup: the MAC stored
+> in your VanMoof account is *not* the address the bike advertises on, so the
+> integration connects using the address it actually sees over the air. Easiest
+> path for an in-range bike is to let **auto-discovery** find it and pick the
+> account login for the key. A bike that's out of range (e.g. in the cellar)
+> can't be set up until it's nearby.
 
 **2. Enter the key manually.** Choose *"Enter the encryption key manually"*, pick
 the bike from the nearby-device list (or paste its MAC), then enter the

@@ -48,6 +48,9 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
         self._key: str | None = None
         self._user_key_id: int | None = None
         self._bikes: list[dict[str, Any]] = []
+        # The account's macAddress is NOT the BLE advertising address, so it's
+        # only used as a soft default in the picker, never as the real address.
+        self._mac_hint: str | None = None
 
     # --- entry points --------------------------------------------------------
 
@@ -113,16 +116,17 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             self._user_key_id = key.get("userKeyId")
             self._name = self._name or bike.get("name") or bike.get("frameNumber")
 
-            # Prefer the address we already have (discovery); else the account MAC.
-            if not self._address:
-                self._address = extract_mac(bike)
+            # From discovery the address is the real advertised one -> use it.
             if self._address:
                 await self.async_set_unique_id(
                     self._address, raise_on_progress=False
                 )
                 self._abort_if_unique_id_configured()
                 return self._create_entry()
-            # No MAC anywhere: ask which nearby device this bike is.
+            # Otherwise DON'T trust the account MAC (it isn't the BLE address);
+            # have the user pick the actually-advertising device. Keep the
+            # account MAC only as a soft default hint.
+            self._mac_hint = extract_mac(bike)
             return await self.async_step_pick_device()
 
         options = {str(i): bike_label(bike) for i, bike in enumerate(self._bikes)}
@@ -201,19 +205,19 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 others[info.address] = f"{info.name or 'Unknown'} ({info.address})"
 
-        # If we know the bike's MAC from the account but it isn't advertising
-        # right now, still offer it so setup can proceed.
-        if self._address and self._address not in bikes:
-            bikes[self._address] = f"{self._name or 'VanMoof'} ({self._address})"
-
         choices = bikes or others
         placeholders = {"found": "VanMoof bikes" if bikes else "no VanMoof detected"}
+        # Soft default: the account MAC, but only if it's actually advertising.
+        # (It usually isn't the BLE address, so we never force it as a choice.)
+        default = self._mac_hint if self._mac_hint in choices else None
         if choices:
-            if self._address in choices:
-                marker = vol.Required(CONF_ADDRESS, default=self._address)
+            if default is not None:
+                marker = vol.Required(CONF_ADDRESS, default=default)
             else:
                 marker = vol.Required(CONF_ADDRESS)
             return vol.Schema({marker: vol.In(choices)}), placeholders
+        # Nothing advertising: the bike must be in range to be set up (the
+        # account MAC won't connect). Offer a manual field as a last resort.
         return vol.Schema({vol.Required(CONF_ADDRESS): str}), placeholders
 
     def _create_entry(self) -> ConfigFlowResult:
