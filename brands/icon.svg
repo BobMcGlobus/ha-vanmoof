@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" fill="none">
+  <!-- Simple placeholder bicycle mark for the VanMoof custom integration.
+       Swap for official artwork before submitting to home-assistant/brands. -->
+  <g stroke="#111111" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <circle cx="60" cy="176" r="44"/>
+    <circle cx="196" cy="176" r="44"/>
+    <!-- frame -->
+    <path d="M60 176 L112 96 L172 96 L196 176 Z"/>
+    <path d="M112 96 L128 176"/>
+    <!-- handlebar / seat -->
+    <path d="M96 84 L124 84"/>
+    <path d="M172 96 L188 72 L204 72"/>
+  </g>
+</svg>

@@ -26,14 +26,14 @@
       },
       "pick_device": {
         "title": "Select the Bluetooth device",
-        "description": "Detected: {found}. Pick the nearby device that is this bike. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
+        "description": "Pick the nearby device that is this bike. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
         "data": {
           "address": "Device"
         }
       },
       "manual": {
         "title": "Select your VanMoof",
-        "description": "Detected: {found}. Pick your bike from the list. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
+        "description": "Pick your bike from the list. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
         "data": {
           "address": "Bike"
         }

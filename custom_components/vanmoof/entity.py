@@ -25,5 +25,7 @@ class VanMoofEntity(CoordinatorEntity[VanMoofCoordinator]):
             identifiers={(DOMAIN, coordinator.address)},
             manufacturer="VanMoof",
             model="S3 / X3",
-            name="VanMoof",
+            # Use the entry title so multiple bikes get distinct device names
+            # (e.g. "ES3-F88A", "Fahrrad Lol") instead of all being "VanMoof".
+            name=coordinator.entry.title,
         )

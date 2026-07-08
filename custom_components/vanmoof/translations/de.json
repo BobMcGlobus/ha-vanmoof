@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "VanMoof hinzufügen",
+        "description": "Hol den Verschlüsselungsschlüssel aus deinem VanMoof-Konto oder gib ihn manuell ein.",
+        "menu_options": {
+          "cloud": "Mit meinem VanMoof-Konto anmelden (empfohlen)",
+          "manual": "Verschlüsselungsschlüssel manuell eingeben"
+        }
+      },
+      "cloud": {
+        "title": "VanMoof-Konto",
+        "description": "Melde dich mit deinem VanMoof-Konto an. Verschlüsselungsschlüssel und User-Key-ID werden aus deinem Konto gelesen und verlassen Home Assistant nicht.",
+        "data": {
+          "username": "E-Mail",
+          "password": "Passwort"
+        }
+      },
+      "cloud_pick": {
+        "title": "Fahrrad auswählen",
+        "description": "Wähle das hinzuzufügende Fahrrad. Der Schlüssel stammt aus deinem Konto.",
+        "data": {
+          "bike": "Fahrrad"
+        }
+      },
+      "pick_device": {
+        "title": "Bluetooth-Gerät auswählen",
+        "description": "Wähle das Gerät in der Nähe, das dieses Fahrrad ist. Wird es nicht angezeigt, wecke es (Knopf am Rad drücken) und öffne diesen Dialog erneut, oder gib die MAC-Adresse manuell ein.",
+        "data": {
+          "address": "Gerät"
+        }
+      },
+      "manual": {
+        "title": "VanMoof auswählen",
+        "description": "Wähle dein Fahrrad aus der Liste. Wird es nicht angezeigt, wecke es (Knopf am Rad drücken) und öffne diesen Dialog erneut, oder gib die MAC-Adresse manuell ein.",
+        "data": {
+          "address": "Fahrrad"
+        }
+      },
+      "credentials": {
+        "title": "VanMoof-Zugangsdaten",
+        "description": "Gib den Verschlüsselungsschlüssel und die User-Key-ID für dieses Fahrrad ein. Wie du sie bekommst, steht in der README der Integration.",
+        "data": {
+          "key": "Verschlüsselungsschlüssel",
+          "user_key_id": "User-Key-ID"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Anmeldung fehlgeschlagen. Prüfe E-Mail und Passwort deines VanMoof-Kontos.",
+      "cannot_connect": "Die VanMoof-Cloud ist nicht erreichbar. Sie ist evtl. offline – versuch es erneut oder gib den Schlüssel manuell ein."
+    },
+    "abort": {
+      "already_configured": "Dieses Fahrrad ist bereits eingerichtet."
+    }
+  }
+}

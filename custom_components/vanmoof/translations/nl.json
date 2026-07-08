@@ -1,0 +1,58 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "VanMoof toevoegen",
+        "description": "Haal de encryptiesleutel uit je VanMoof-account of voer hem handmatig in.",
+        "menu_options": {
+          "cloud": "Inloggen met mijn VanMoof-account (aanbevolen)",
+          "manual": "Encryptiesleutel handmatig invoeren"
+        }
+      },
+      "cloud": {
+        "title": "VanMoof-account",
+        "description": "Log in met je VanMoof-account. De encryptiesleutel en user key id worden uit je account gelezen en verlaten Home Assistant niet.",
+        "data": {
+          "username": "E-mail",
+          "password": "Wachtwoord"
+        }
+      },
+      "cloud_pick": {
+        "title": "Selecteer je fiets",
+        "description": "Kies de fiets die je wilt toevoegen. De sleutel komt uit je account.",
+        "data": {
+          "bike": "Fiets"
+        }
+      },
+      "pick_device": {
+        "title": "Selecteer het Bluetooth-apparaat",
+        "description": "Kies het apparaat in de buurt dat deze fiets is. Als het er niet bij staat, maak de fiets wakker (druk op een knop op de fiets) en open dit venster opnieuw, of typ het MAC-adres handmatig in.",
+        "data": {
+          "address": "Apparaat"
+        }
+      },
+      "manual": {
+        "title": "Selecteer je VanMoof",
+        "description": "Kies je fiets uit de lijst. Als hij er niet bij staat, maak hem wakker (druk op een knop op de fiets) en open dit venster opnieuw, of typ het MAC-adres handmatig in.",
+        "data": {
+          "address": "Fiets"
+        }
+      },
+      "credentials": {
+        "title": "VanMoof-inloggegevens",
+        "description": "Voer de encryptiesleutel en user key id voor deze fiets in. Zie de README van de integratie voor hoe je ze krijgt.",
+        "data": {
+          "key": "Encryptiesleutel",
+          "user_key_id": "User key id"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Inloggen mislukt. Controleer je VanMoof-e-mail en wachtwoord.",
+      "cannot_connect": "Kan de VanMoof-cloud niet bereiken. Mogelijk offline — probeer opnieuw of voer de sleutel handmatig in."
+    },
+    "abort": {
+      "already_configured": "Deze fiets is al ingesteld."
+    }
+  }
+}

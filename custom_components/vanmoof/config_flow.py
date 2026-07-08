@@ -143,11 +143,8 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
             return self._create_entry()
 
-        schema, placeholders = self._ble_picker_schema()
         return self.async_show_form(
-            step_id="pick_device",
-            data_schema=schema,
-            description_placeholders=placeholders,
+            step_id="pick_device", data_schema=self._ble_picker_schema()
         )
 
     # --- manual path ---------------------------------------------------------
@@ -166,11 +163,8 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
             return await self.async_step_credentials()
 
-        schema, placeholders = self._ble_picker_schema()
         return self.async_show_form(
-            step_id="manual",
-            data_schema=schema,
-            description_placeholders=placeholders,
+            step_id="manual", data_schema=self._ble_picker_schema()
         )
 
     async def async_step_credentials(
@@ -192,7 +186,7 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
 
     # --- helpers -------------------------------------------------------------
 
-    def _ble_picker_schema(self) -> tuple[vol.Schema, dict[str, str]]:
+    def _ble_picker_schema(self) -> vol.Schema:
         """Build a device picker, VanMoof bikes first, with sensible fallback."""
         current = self._async_current_ids()
         bikes: dict[str, str] = {}
@@ -206,7 +200,6 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
                 others[info.address] = f"{info.name or 'Unknown'} ({info.address})"
 
         choices = bikes or others
-        placeholders = {"found": "VanMoof bikes" if bikes else "no VanMoof detected"}
         # Soft default: the account MAC, but only if it's actually advertising.
         # (It usually isn't the BLE address, so we never force it as a choice.)
         default = self._mac_hint if self._mac_hint in choices else None
@@ -215,10 +208,10 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
                 marker = vol.Required(CONF_ADDRESS, default=default)
             else:
                 marker = vol.Required(CONF_ADDRESS)
-            return vol.Schema({marker: vol.In(choices)}), placeholders
+            return vol.Schema({marker: vol.In(choices)})
         # Nothing advertising: the bike must be in range to be set up (the
         # account MAC won't connect). Offer a manual field as a last resort.
-        return vol.Schema({vol.Required(CONF_ADDRESS): str}), placeholders
+        return vol.Schema({vol.Required(CONF_ADDRESS): str})
 
     def _create_entry(self) -> ConfigFlowResult:
         return self.async_create_entry(

@@ -1,0 +1,30 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Catch breakage from HA / HACS changes even without commits.
+    - cron: "30 4 * * 1"
+
+jobs:
+  hassfest:
+    name: hassfest (manifest & integration schema)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration
+          # The brand (logo/icon) lives in home-assistant/brands and isn't
+          # submitted yet; drop this ignore once the brands PR is merged.
+          ignore: brands

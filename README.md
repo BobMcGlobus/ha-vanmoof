@@ -1,4 +1,8 @@
-# VanMoof S3/X3 — Home Assistant integration (skeleton)
+# VanMoof S3/X3 — Home Assistant integration
+
+[![Validate](https://github.com/BobMcGlobus/ha-vanmoof/actions/workflows/validate.yml/badge.svg)](https://github.com/BobMcGlobus/ha-vanmoof/actions/workflows/validate.yml)
+[![hacs](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz)
+[![release](https://img.shields.io/github/v/release/BobMcGlobus/ha-vanmoof)](https://github.com/BobMcGlobus/ha-vanmoof/releases)
 
 A **standalone** HACS custom integration for the VanMoof S3/X3, talking to the
 bike directly over BLE from Home Assistant — no Pi bridge, no MQTT layer.
@@ -8,14 +12,23 @@ It exposes:
 - `sensor.*` — battery %, odometer (km, total_increasing), current speed (km/h)
 - `lock.*` — the bike's digital lock (lock / unlock)
 
-Under the hood it wraps [`pymoof`](https://github.com/quantsini/pymoof) and uses
-Home Assistant's own Bluetooth stack (`bleak-retry-connector`), so the
-connection is routed automatically through the **local adapter or any ESPHome
-Bluetooth proxy** that can currently reach the bike.
+Under the hood it wraps a vendored slice of
+[`pymoof`](https://github.com/quantsini/pymoof) and uses Home Assistant's own
+Bluetooth stack (`bleak-retry-connector`), so the connection is routed
+automatically through the **local adapter or any ESPHome Bluetooth proxy** that
+can currently reach the bike. Setup can pull the encryption key straight from
+your VanMoof account; after that it's fully local.
 
-> Status: v0.1.0 — first testable release. Auto-discovery is enabled, the
-> `LockState` enum is verified against pymoof source, and `pymoof` is pinned.
-> Still pending: a first run against a real bike (see *Not yet validated*).
+Translations: English, German, Dutch.
+
+## Supported hardware
+
+- ✅ **VanMoof S3 / X3** — supported and tested on real S3 hardware.
+- ❔ **Other bikes:** the S3/X3 BLE protocol (via pymoof) is the only one
+  implemented. SX1/SX2 and "Smart" S1/S2 are recognised over the air but *not*
+  supported by pymoof; S5 / A5 use a different, unsupported protocol. Adding a
+  model means adding a second BLE client — contributions welcome, but there's no
+  untested "support" claimed here.
 
 ---
 
@@ -63,27 +76,22 @@ extracted offline via [`chwdt/vanmoof-tools`](https://github.com/chwdt/vanmoof-t
 
 ---
 
-## Not yet validated
+## Status & known rough edges
 
-Everything below is code-complete but has **not been exercised against a real
-bike** yet. Once you've run a bike through setup, confirm:
+Verified on real S3 hardware: account login, auto-discovery, connect →
+authenticate → read, and the battery / odometer / speed sensors + lock entity.
 
-- **All reads return plausible values** — battery %, odometer, speed, lock
-  state. The plan's `scratch_probe.py` (throwaway, not shipped) isolates this
-  ahead of HA if you want.
-- **Lock/unlock actually actuates** the bike. The `LockState` enum
-  (`UNLOCKED=0x00`, `LOCKED=0x01`, `AWAITING_UNLOCK=0x02`) is verified against
-  pymoof 0.0.6 source, but the round-trip through the bike isn't.
-- **Auto-discovery fires.** HA should pop up "New device discovered" for the
-  bike via the advertised BikeInfo service UUID
-  `6acc5540-e631-4069-944d-b8ca7598ad50` (this is what pymoof's own
-  `discover_bike` scans for). The manual *Add Integration → VanMoof* flow works
-  regardless.
+Known rough edges:
 
-Known rough edge: a **wrong key** currently surfaces as a repeating
-`ConfigEntryNotReady`/`UpdateFailed` retry loop rather than a clean auth error,
-because `authenticate()` returns silently and only the first read raises. A
-`ConfigEntryAuthFailed`-based reauth flow is the planned fix.
+- **Wrong key** currently surfaces as a repeating `ConfigEntryNotReady` /
+  `UpdateFailed` retry loop rather than a clean auth error, because
+  `authenticate()` returns silently and only the first read raises. A
+  `ConfigEntryAuthFailed`-based reauth flow is the planned fix.
+- **The bike must be in range and awake during setup** — the MAC in your VanMoof
+  account is *not* the BLE address it advertises on, so the integration uses the
+  address it actually sees over the air.
+- **No brand icon yet** — the logo/icon lives in `home-assistant/brands`; see
+  [`brands/README.md`](brands/README.md) for the one-time submission.
 
 ---
 
