@@ -91,6 +91,11 @@
       "module_battery": {
         "name": "Module-accu"
       }
+    },
+    "button": {
+      "refresh": {
+        "name": "Vernieuwen"
+      }
     }
   }
 }

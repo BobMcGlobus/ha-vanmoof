@@ -8,6 +8,7 @@ ESPHome proxy can currently reach the bike.
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import timedelta
@@ -140,24 +141,35 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
     async def _read_all(self, sx3: SX3Client) -> VanMoofData:
         # Core reads define success; if these fail it's a real error (surfaced
         # by _with_client as UpdateFailed / reauth).
-        # NOTE: get_battery_level() reads the motor/main battery.
-        data = VanMoofData(
-            battery=await sx3.get_battery_level(),
-            distance_km=await sx3.get_distance_travelled(),
-            speed_kmh=await sx3.get_speed(),
-            lock_state=await sx3.get_lock_state(),
-        )
-        # Frame number comes from the cloud account (BLE read is unreliable).
-        data.frame_number = self.frame_number
+        distance_km = await sx3.get_distance_travelled()
+        speed_kmh = await sx3.get_speed()
+        lock_state = await sx3.get_lock_state()
         # Optional reads: best-effort, never fail the poll (some characteristics
         # return "Invalid Handle" on certain firmware).
-        data.module_battery = await self._try_read(sx3.get_module_battery_level)
-        data.bike_firmware = await self._try_read(sx3.get_bike_firmware_version)
+        module_battery = await self._try_read(sx3.get_module_battery_level)
+        bike_firmware = await self._try_read(sx3.get_bike_firmware_version)
         errors = await self._try_read(sx3.get_errors)
-        data.has_error = bool(errors and any(errors))
         charging = await self._try_read(sx3.get_motor_battery_state)
-        data.charging = bool(charging) if charging is not None else None
-        return data
+        # Battery last, with a re-read guard: the S3 reports a placeholder 100 %
+        # for the first moment after waking, before the BMS reports the real SoC.
+        # Reading it after the round-trips above, then re-reading if it's 100,
+        # avoids a spurious 100 % on (re)connect. get_battery_level() reads the
+        # motor/main battery.
+        battery = await sx3.get_battery_level()
+        if battery >= 100:
+            await asyncio.sleep(2)
+            battery = await sx3.get_battery_level()
+        return VanMoofData(
+            battery=battery,
+            distance_km=distance_km,
+            speed_kmh=speed_kmh,
+            lock_state=lock_state,
+            frame_number=self.frame_number,
+            module_battery=module_battery,
+            bike_firmware=bike_firmware,
+            has_error=bool(errors and any(errors)),
+            charging=bool(charging) if charging is not None else None,
+        )
 
     async def _try_read(
         self, read: Callable[[], Awaitable[_T]]

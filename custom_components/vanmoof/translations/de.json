@@ -91,6 +91,11 @@
       "module_battery": {
         "name": "Modul-Akku"
       }
+    },
+    "button": {
+      "refresh": {
+        "name": "Aktualisieren"
+      }
     }
   }
 }

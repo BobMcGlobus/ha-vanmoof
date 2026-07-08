@@ -18,7 +18,10 @@ It exposes:
   **Charging**: on while the main battery is charging. **Problem**: on when the
   bike reports an error.
 
-Device info carries the frame number (serial) and firmware version.
+- `button.*` — **Refresh**: forces an immediate poll instead of waiting for the
+  interval (stays pressable even when the bike is currently unavailable).
+
+Device info carries the frame number (serial), model, and firmware version.
 
 The **poll interval** is adjustable per bike (integration → *Configure*). A wrong
 encryption key triggers a **re-authentication** prompt instead of a silent retry

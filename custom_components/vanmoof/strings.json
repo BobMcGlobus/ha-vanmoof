@@ -84,6 +84,11 @@
         "name": "Problem"
       }
     },
+    "button": {
+      "refresh": {
+        "name": "Refresh"
+      }
+    },
     "sensor": {
       "frame_number": {
         "name": "Frame number"
