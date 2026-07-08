@@ -1,4 +1,13 @@
-"""Config flow for VanMoof."""
+"""Config flow for VanMoof.
+
+Two ways to set a bike up:
+
+* **VanMoof account** (recommended): log in, pick the bike, and the encryption
+  key + user key id are fetched automatically. If the account lists the bike's
+  MAC we use it directly; otherwise we ask which nearby device it is.
+* **Manual**: pick the nearby device, then paste the key + user key id (e.g. from
+  offline extraction when the cloud is unavailable).
+"""
 
 from __future__ import annotations
 
@@ -11,9 +20,21 @@ from homeassistant.components.bluetooth import (
     async_discovered_service_info,
 )
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS
+from homeassistant.const import CONF_ADDRESS, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
+)
 
 from .const import CONF_KEY, CONF_USER_KEY_ID, DOMAIN, SX3_SERVICE_UUID
+from .vanmoof_cloud import (
+    VanMoofAuthError,
+    VanMoofCloudError,
+    async_get_bikes,
+    bike_label,
+    extract_mac,
+)
 
 
 class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -24,15 +45,22 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._address: str | None = None
         self._name: str | None = None
+        self._key: str | None = None
+        self._user_key_id: int | None = None
+        self._bikes: list[dict[str, Any]] = []
+
+    # --- entry points --------------------------------------------------------
+
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let the user choose the account or the manual path."""
+        return self.async_show_menu(step_id="user", menu_options=["cloud", "manual"])
 
     async def async_step_bluetooth(
         self, discovery_info: BluetoothServiceInfoBleak
     ) -> ConfigFlowResult:
-        """Handle a bike found automatically.
-
-        Only fires once a matcher is added to manifest.json (see README). The
-        manual ``user`` step below works without it.
-        """
+        """Handle a bike found automatically via the manifest matcher."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
         self._address = discovery_info.address
@@ -40,61 +68,115 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
         self.context["title_placeholders"] = {
             "name": discovery_info.name or discovery_info.address
         }
-        return await self.async_step_credentials()
+        # Address is already known; still offer account vs. manual for the key.
+        return self.async_show_menu(step_id="user", menu_options=["cloud", "manual"])
 
-    async def async_step_user(
+    # --- cloud path ----------------------------------------------------------
+
+    async def async_step_cloud(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Manual setup: pick a nearby connectable device, then enter keys."""
+        """Log in to the VanMoof account and fetch the bikes."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                self._bikes = await async_get_bikes(
+                    self.hass,
+                    user_input[CONF_USERNAME],
+                    user_input[CONF_PASSWORD],
+                )
+            except VanMoofAuthError:
+                errors["base"] = "invalid_auth"
+            except VanMoofCloudError:
+                errors["base"] = "cannot_connect"
+            else:
+                return await self.async_step_cloud_pick()
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_PASSWORD): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                ),
+            }
+        )
+        return self.async_show_form(step_id="cloud", data_schema=schema, errors=errors)
+
+    async def async_step_cloud_pick(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Pick which account bike to add; key comes from the account."""
+        if user_input is not None:
+            bike = self._bikes[int(user_input["bike"])]
+            key = bike.get("key") or {}
+            self._key = key.get("encryptionKey")
+            self._user_key_id = key.get("userKeyId")
+            self._name = self._name or bike.get("name") or bike.get("frameNumber")
+
+            # Prefer the address we already have (discovery); else the account MAC.
+            if not self._address:
+                self._address = extract_mac(bike)
+            if self._address:
+                await self.async_set_unique_id(
+                    self._address, raise_on_progress=False
+                )
+                self._abort_if_unique_id_configured()
+                return self._create_entry()
+            # No MAC anywhere: ask which nearby device this bike is.
+            return await self.async_step_pick_device()
+
+        options = {str(i): bike_label(bike) for i, bike in enumerate(self._bikes)}
+        schema = vol.Schema({vol.Required("bike"): vol.In(options)})
+        return self.async_show_form(step_id="cloud_pick", data_schema=schema)
+
+    async def async_step_pick_device(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Fallback: choose the BLE device for an already-known cloud bike."""
+        if user_input is not None:
+            self._address = user_input[CONF_ADDRESS]
+            await self.async_set_unique_id(self._address, raise_on_progress=False)
+            self._abort_if_unique_id_configured()
+            return self._create_entry()
+
+        schema, placeholders = self._ble_picker_schema()
+        return self.async_show_form(
+            step_id="pick_device",
+            data_schema=schema,
+            description_placeholders=placeholders,
+        )
+
+    # --- manual path ---------------------------------------------------------
+
+    async def async_step_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Pick the nearby device (unless discovery already gave us one)."""
+        if self._address is not None:
+            # Came from discovery: address known, go straight to key entry.
+            return await self.async_step_credentials()
+
         if user_input is not None:
             self._address = user_input[CONF_ADDRESS]
             await self.async_set_unique_id(self._address, raise_on_progress=False)
             self._abort_if_unique_id_configured()
             return await self.async_step_credentials()
 
-        current = self._async_current_ids()
-        bikes: dict[str, str] = {}
-        others: dict[str, str] = {}
-        for info in async_discovered_service_info(self.hass, connectable=True):
-            if info.address in current:
-                continue
-            label = f"{info.name or 'Unknown'} ({info.address})"
-            if SX3_SERVICE_UUID in info.service_uuids:
-                bikes[info.address] = f"{info.name or 'VanMoof'} ({info.address})"
-            else:
-                others[info.address] = label
-
-        # Prefer the filtered VanMoof list. Only if nothing nearby advertises the
-        # bike service do we fall back to every device (so the user is never
-        # blocked, e.g. bike asleep / UUID not seen yet), plus a manual MAC field.
-        if bikes:
-            schema = vol.Schema({vol.Required(CONF_ADDRESS): vol.In(bikes)})
-        elif others:
-            schema = vol.Schema({vol.Required(CONF_ADDRESS): vol.In(others)})
-        else:
-            schema = vol.Schema({vol.Required(CONF_ADDRESS): str})
-
+        schema, placeholders = self._ble_picker_schema()
         return self.async_show_form(
-            step_id="user",
+            step_id="manual",
             data_schema=schema,
-            description_placeholders={
-                "found": "VanMoof bikes" if bikes else "no VanMoof detected"
-            },
+            description_placeholders=placeholders,
         )
 
     async def async_step_credentials(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Collect the bike's encryption key and user key id."""
+        """Collect the bike's encryption key and user key id manually."""
         if user_input is not None:
-            return self.async_create_entry(
-                title=self._name or self._address or "VanMoof",
-                data={
-                    CONF_ADDRESS: self._address,
-                    CONF_KEY: user_input[CONF_KEY],
-                    CONF_USER_KEY_ID: user_input[CONF_USER_KEY_ID],
-                },
-            )
+            self._key = user_input[CONF_KEY]
+            self._user_key_id = user_input[CONF_USER_KEY_ID]
+            return self._create_entry()
 
         schema = vol.Schema(
             {
@@ -103,3 +185,43 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             }
         )
         return self.async_show_form(step_id="credentials", data_schema=schema)
+
+    # --- helpers -------------------------------------------------------------
+
+    def _ble_picker_schema(self) -> tuple[vol.Schema, dict[str, str]]:
+        """Build a device picker, VanMoof bikes first, with sensible fallback."""
+        current = self._async_current_ids()
+        bikes: dict[str, str] = {}
+        others: dict[str, str] = {}
+        for info in async_discovered_service_info(self.hass, connectable=True):
+            if info.address in current:
+                continue
+            if SX3_SERVICE_UUID in info.service_uuids:
+                bikes[info.address] = f"{info.name or 'VanMoof'} ({info.address})"
+            else:
+                others[info.address] = f"{info.name or 'Unknown'} ({info.address})"
+
+        # If we know the bike's MAC from the account but it isn't advertising
+        # right now, still offer it so setup can proceed.
+        if self._address and self._address not in bikes:
+            bikes[self._address] = f"{self._name or 'VanMoof'} ({self._address})"
+
+        choices = bikes or others
+        placeholders = {"found": "VanMoof bikes" if bikes else "no VanMoof detected"}
+        if choices:
+            if self._address in choices:
+                marker = vol.Required(CONF_ADDRESS, default=self._address)
+            else:
+                marker = vol.Required(CONF_ADDRESS)
+            return vol.Schema({marker: vol.In(choices)}), placeholders
+        return vol.Schema({vol.Required(CONF_ADDRESS): str}), placeholders
+
+    def _create_entry(self) -> ConfigFlowResult:
+        return self.async_create_entry(
+            title=self._name or self._address or "VanMoof",
+            data={
+                CONF_ADDRESS: self._address,
+                CONF_KEY: self._key,
+                CONF_USER_KEY_ID: self._user_key_id,
+            },
+        )

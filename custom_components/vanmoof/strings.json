@@ -2,6 +2,36 @@
   "config": {
     "step": {
       "user": {
+        "title": "Add your VanMoof",
+        "description": "Fetch the encryption key from your VanMoof account, or enter it manually.",
+        "menu_options": {
+          "cloud": "Log in with my VanMoof account (recommended)",
+          "manual": "Enter the encryption key manually"
+        }
+      },
+      "cloud": {
+        "title": "VanMoof account",
+        "description": "Log in with your VanMoof account. The encryption key and user key id are read from your account and never leave Home Assistant.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      },
+      "cloud_pick": {
+        "title": "Select your bike",
+        "description": "Pick the bike to add. Its key is taken from your account.",
+        "data": {
+          "bike": "Bike"
+        }
+      },
+      "pick_device": {
+        "title": "Select the Bluetooth device",
+        "description": "Detected: {found}. Pick the nearby device that is this bike. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
+        "data": {
+          "address": "Device"
+        }
+      },
+      "manual": {
         "title": "Select your VanMoof",
         "description": "Detected: {found}. Pick your bike from the list. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
         "data": {
@@ -16,6 +46,10 @@
           "user_key_id": "User key id"
         }
       }
+    },
+    "error": {
+      "invalid_auth": "Login failed. Check your VanMoof email and password.",
+      "cannot_connect": "Couldn't reach the VanMoof cloud. It may be down — try again, or use manual key entry."
     },
     "abort": {
       "already_configured": "This bike is already set up."

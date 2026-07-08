@@ -28,30 +28,31 @@ Bluetooth proxy** that can currently reach the bike.
 **Manual**
 Copy `custom_components/vanmoof/` into `<config>/custom_components/`, restart HA.
 
-Then: *Settings → Devices & Services → Add Integration → VanMoof*. Pick the bike
-from the discovered-device list (or paste its MAC), then enter the encryption
-key and user key id.
+Then: *Settings → Devices & Services → Add Integration → VanMoof*, and pick one
+of the two setup paths below.
 
 ---
 
-## Getting the encryption key + user key id
+## Setup: getting the encryption key + user key id
 
-`pymoof` reads these from your VanMoof account. Two ways:
+The config flow offers two ways. Either way, once set up the integration is
+**fully local** — the cloud is only touched (optionally) during setup.
 
-```bash
-pip install pymoof
-python -c "import asyncio; from pymoof.tools import retrieve_encryption_key as r; \
-           asyncio.run(r.main())"   # follow the prompts (VanMoof login)
-```
+**1. Log in with your VanMoof account (recommended).** Choose *"Log in with my
+VanMoof account"*, enter your VanMoof email + password, and pick the bike. The
+`encryptionKey` and `userKeyId` are read from your account automatically; if the
+account lists the bike's MAC it's matched for you, otherwise you pick the nearby
+device. Credentials are used once and not stored.
 
-The tool returns, per bike, the `encryptionKey` (hex string → **Encryption key**)
-and `userKeyId` (int → **User key id**).
+**2. Enter the key manually.** Choose *"Enter the encryption key manually"*, pick
+the bike from the nearby-device list (or paste its MAC), then enter the
+`encryptionKey` (hex → **Encryption key**) and `userKeyId` (int → **User key
+id**). Get these however you like — e.g. offline from the bike.
 
-**Caveat (post-bankruptcy):** VanMoof's servers changed hands (Lavoie). If the
-account/API path is down when you try, extract the keys offline instead via
-[`chwdt/vanmoof-tools`](https://github.com/chwdt/vanmoof-tools) (dumps the keys
-stored on the bike over BLE). Once you have them, this integration never needs
-the cloud again — it's fully local.
+**Caveat (post-bankruptcy):** VanMoof's servers changed hands (Lavoie), so the
+account login may be flaky or gone. If it fails, use manual entry with keys
+extracted offline via [`chwdt/vanmoof-tools`](https://github.com/chwdt/vanmoof-tools)
+(dumps the keys stored on the bike over BLE).
 
 ---
 
