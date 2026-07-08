@@ -4,14 +4,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from pymoof.clients.sx3 import LockState
-
 from homeassistant.components.lock import LockEntity
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .coordinator import VanMoofConfigEntry, VanMoofCoordinator
 from .entity import VanMoofEntity
+from .pymoof_vendor.clients.sx3 import LockState
 
 
 async def async_setup_entry(

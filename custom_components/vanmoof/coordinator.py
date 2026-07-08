@@ -15,7 +15,6 @@ from typing import TypeVar
 
 from bleak.exc import BleakError
 from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
-from pymoof.clients.sx3 import LockState, SX3Client
 
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
@@ -24,6 +23,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import CONF_KEY, CONF_USER_KEY_ID, DOMAIN, SCAN_INTERVAL
+from .pymoof_vendor.clients.sx3 import LockState, SX3Client
 
 _LOGGER = logging.getLogger(__name__)
 

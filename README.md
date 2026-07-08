@@ -92,6 +92,14 @@ because `authenticate()` returns silently and only the first read raises. A
   therefore currently surfaces as a repeating `UpdateFailed`/`ConfigEntryNotReady`
   retry loop rather than a clean auth error. If you want a reauth flow, raise
   `ConfigEntryAuthFailed` from `_with_client` on the first-read failure.
+- **`pymoof` is vendored, not a requirement.** The published `pymoof` pins
+  `bleak<0.15` and `cryptography<37`, which conflict with Home Assistant's own
+  (much newer) versions — installing it makes HA's requirement step fail (a
+  *"config flow could not be loaded: 500"*). So the small runtime slice of
+  pymoof (SX3 client, GATT profile, BLE helpers) lives under
+  `pymoof_vendor/` (MIT, upstream quantsini/pymoof) and uses HA's own `bleak`
+  and `cryptography`. Nothing is pip-installed. To refresh it, re-copy those
+  files from upstream and re-point the two package-internal imports.
 - **Availability is automatic.** When the bike is out of range, the poll fails
   and all entities go `unavailable` via `CoordinatorEntity`. No extra code.
 - **Idempotent setup.** `unique_id` is the MAC. Consider `get_frame_number()`
