@@ -1,0 +1,6 @@
+This project (ha-vanmoof) is MIT-licensed; see LICENSE.
+
+It vendors a portion of pymoof (https://github.com/quantsini/pymoof), which is
+also MIT-licensed (Copyright (c) 2022 Henri Bai). The vendored files and their
+license are under custom_components/vanmoof/pymoof_vendor/ (see
+custom_components/vanmoof/pymoof_vendor/LICENSE).
