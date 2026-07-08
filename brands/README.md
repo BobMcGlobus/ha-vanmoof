@@ -1,27 +1,24 @@
 # Brand assets
 
-Home Assistant shows an integration's logo/icon from the central
-[`home-assistant/brands`](https://github.com/home-assistant/brands) repo — it is
-**not** loaded from this repo. Until a brand is submitted there, the UI shows
-"logo not available" placeholders.
+Source artwork for the integration's icon/logo (self-drawn bicycle silhouette +
+Helvetica "S3/X3" wordmark, in VanMoof yellow).
 
-`icon.svg` here is only a **source/placeholder**. Replace it with official VanMoof
-artwork you have the right to use before submitting.
+- `icon.svg` — vector source of the icon.
+- `icon.png` (256×256), `icon@2x.png` (512×512) — square icon.
+- `logo.png` (512×176), `logo@2x.png` (1024×352) — wordmark (@2x is exactly 2×).
 
-## How to add the icon (one-time)
+## How the icon reaches Home Assistant
 
-1. Export PNGs from the artwork (transparent background, trimmed to content,
-   square):
-   - `icon.png` — 256×256
-   - `icon@2x.png` — 512×512
-   - optionally `logo.png` / `logo@2x.png` (wordmark, max 512 px on the long side)
-2. Fork `home-assistant/brands` and add them under **custom integrations**:
-   ```
-   custom_integrations/vanmoof/icon.png
-   custom_integrations/vanmoof/icon@2x.png
-   ```
-3. Open a PR. Once merged, HA/HACS show the icon automatically and the
-   `ignore: brands` line in `.github/workflows/validate.yml` can be removed.
+Since **Home Assistant 2026.3**, custom integrations ship their brand images
+themselves — no PR to `home-assistant/brands` is needed (that repo now rejects
+custom-integration icons; see
+https://developers.home-assistant.io/blog/2026/02/24/brands-proxy-api).
 
-No image tooling was available where this was scaffolded, so the PNG export is
-left as a manual step.
+The images HA actually serves live in **`custom_components/vanmoof/brand/`**
+(`icon.png`, `icon@2x.png`, `logo.png`, `logo@2x.png`). Local brand images take
+priority over the brands CDN. This `brands/` folder is just the source of truth;
+keep the two in sync (copy the PNGs into `custom_components/vanmoof/brand/` after
+changing them here).
+
+On HA older than 2026.3 the icon won't show (no local brand support); everything
+else works regardless.
