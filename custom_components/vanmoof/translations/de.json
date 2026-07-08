@@ -45,6 +45,14 @@
           "key": "Verschlüsselungsschlüssel",
           "user_key_id": "User-Key-ID"
         }
+      },
+      "reauth_confirm": {
+        "title": "VanMoof-Authentifizierung fehlgeschlagen",
+        "description": "Das Fahrrad hat den Verschlüsselungsschlüssel abgelehnt. Gib einen korrigierten Schlüssel und die User-Key-ID ein.",
+        "data": {
+          "key": "Verschlüsselungsschlüssel",
+          "user_key_id": "User-Key-ID"
+        }
       }
     },
     "error": {
@@ -52,7 +60,26 @@
       "cannot_connect": "Die VanMoof-Cloud ist nicht erreichbar. Sie ist evtl. offline – versuch es erneut oder gib den Schlüssel manuell ein."
     },
     "abort": {
-      "already_configured": "Dieses Fahrrad ist bereits eingerichtet."
+      "already_configured": "Dieses Fahrrad ist bereits eingerichtet.",
+      "reauth_successful": "Der Verschlüsselungsschlüssel wurde aktualisiert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "VanMoof-Optionen",
+        "description": "Wie oft das Fahrrad per Bluetooth abgefragt wird (in Minuten). Niedriger ist aktueller, kostet aber mehr Funk und Fahrrad-Akku; Auf-/Abschließen verbindet immer sofort, unabhängig davon.",
+        "data": {
+          "scan_interval": "Abfrageintervall (Minuten)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "in_range": {
+        "name": "In Reichweite"
+      }
     }
   }
 }

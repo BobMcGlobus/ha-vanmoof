@@ -45,6 +45,14 @@
           "key": "Encryption key",
           "user_key_id": "User key id"
         }
+      },
+      "reauth_confirm": {
+        "title": "VanMoof authentication failed",
+        "description": "The bike rejected the encryption key. Enter a corrected key and user key id.",
+        "data": {
+          "key": "Encryption key",
+          "user_key_id": "User key id"
+        }
       }
     },
     "error": {
@@ -52,7 +60,26 @@
       "cannot_connect": "Couldn't reach the VanMoof cloud. It may be down — try again, or use manual key entry."
     },
     "abort": {
-      "already_configured": "This bike is already set up."
+      "already_configured": "This bike is already set up.",
+      "reauth_successful": "The encryption key was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "VanMoof options",
+        "description": "How often to poll the bike over Bluetooth (in minutes). Lower is fresher but uses more radio and bike battery; locking/unlocking always connects immediately regardless of this.",
+        "data": {
+          "scan_interval": "Polling interval (minutes)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "in_range": {
+        "name": "In range"
+      }
     }
   }
 }

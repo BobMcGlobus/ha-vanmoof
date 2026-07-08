@@ -11,6 +11,7 @@ Two ways to set a bike up:
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 import voluptuous as vol
@@ -19,15 +20,34 @@ from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_ADDRESS, CONF_PASSWORD, CONF_USERNAME
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.const import (
+    CONF_ADDRESS,
+    CONF_PASSWORD,
+    CONF_SCAN_INTERVAL,
+    CONF_USERNAME,
+)
+from homeassistant.core import callback
 from homeassistant.helpers.selector import (
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
 
-from .const import CONF_KEY, CONF_USER_KEY_ID, DOMAIN, SX3_SERVICE_UUID
+from .const import (
+    CONF_KEY,
+    CONF_USER_KEY_ID,
+    DEFAULT_SCAN_INTERVAL_MINUTES,
+    DOMAIN,
+    MAX_SCAN_INTERVAL_MINUTES,
+    MIN_SCAN_INTERVAL_MINUTES,
+    SX3_SERVICE_UUID,
+)
 from .vanmoof_cloud import (
     VanMoofAuthError,
     VanMoofCloudError,
@@ -51,6 +71,11 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
         # The account's macAddress is NOT the BLE advertising address, so it's
         # only used as a soft default in the picker, never as the real address.
         self._mac_hint: str | None = None
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> VanMoofOptionsFlow:
+        return VanMoofOptionsFlow()
 
     # --- entry points --------------------------------------------------------
 
@@ -184,6 +209,37 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
         )
         return self.async_show_form(step_id="credentials", data_schema=schema)
 
+    # --- reauth --------------------------------------------------------------
+
+    async def async_step_reauth(
+        self, entry_data: Mapping[str, Any]
+    ) -> ConfigFlowResult:
+        """Triggered when reads keep failing after connecting (bad key)."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let the user supply a corrected encryption key + user key id."""
+        if user_input is not None:
+            return self.async_update_reload_and_abort(
+                self._get_reauth_entry(),
+                data_updates={
+                    CONF_KEY: user_input[CONF_KEY],
+                    CONF_USER_KEY_ID: user_input[CONF_USER_KEY_ID],
+                },
+            )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_KEY): str,
+                vol.Required(CONF_USER_KEY_ID): vol.Coerce(int),
+            }
+        )
+        return self.async_show_form(
+            step_id="reauth_confirm", data_schema=schema
+        )
+
     # --- helpers -------------------------------------------------------------
 
     def _ble_picker_schema(self) -> vol.Schema:
@@ -222,3 +278,29 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_USER_KEY_ID: self._user_key_id,
             },
         )
+
+
+class VanMoofOptionsFlow(OptionsFlow):
+    """Options: adjust how often the bike is polled."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        current = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES
+        )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_SCAN_INTERVAL, default=current): vol.All(
+                    vol.Coerce(int),
+                    vol.Range(
+                        min=MIN_SCAN_INTERVAL_MINUTES,
+                        max=MAX_SCAN_INTERVAL_MINUTES,
+                    ),
+                )
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

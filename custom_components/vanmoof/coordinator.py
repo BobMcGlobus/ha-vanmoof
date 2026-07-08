@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import timedelta
 import logging
 from typing import TypeVar
 
@@ -18,12 +19,23 @@ from bleak_retry_connector import BleakClientWithServiceCache, establish_connect
 
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS
+from homeassistant.const import CONF_ADDRESS, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_KEY, CONF_USER_KEY_ID, DOMAIN, SCAN_INTERVAL
+from .const import (
+    CONF_KEY,
+    CONF_USER_KEY_ID,
+    DEFAULT_SCAN_INTERVAL_MINUTES,
+    DOMAIN,
+)
 from .pymoof_vendor.clients.sx3 import LockState, SX3Client
+
+# Escalate to a reauth flow only after this many consecutive failures that
+# happen *after* a successful connection (a genuine bad key keeps failing; a
+# one-off BLE glitch shouldn't nag the user to re-authenticate).
+_AUTH_FAILURE_THRESHOLD = 2
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,16 +58,20 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
     """Connects to the bike over BLE, authenticates, and polls state."""
 
     def __init__(self, hass: HomeAssistant, entry: VanMoofConfigEntry) -> None:
+        minutes = entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES
+        )
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=SCAN_INTERVAL,
+            update_interval=timedelta(minutes=minutes),
         )
         self.entry = entry
         self.address: str = entry.data[CONF_ADDRESS]
         self._key: str = entry.data[CONF_KEY]
         self._user_key_id: int = entry.data[CONF_USER_KEY_ID]
+        self._post_connect_failures = 0
 
     async def _async_update_data(self) -> VanMoofData:
         return await self._with_client(self._read_all)
@@ -75,18 +91,34 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
                 f"VanMoof {self.address} is not advertising / out of range"
             )
 
-        client = await establish_connection(
-            BleakClientWithServiceCache, ble_device, self.address
-        )
+        try:
+            client = await establish_connection(
+                BleakClientWithServiceCache, ble_device, self.address
+            )
+        except BleakError as err:
+            # Couldn't even connect: transient (out of range / busy). Retry next
+            # cycle; don't count it against authentication.
+            raise UpdateFailed(f"couldn't connect to the bike: {err}") from err
+
         try:
             sx3 = SX3Client(client, self._key, self._user_key_id)
-            # NOTE: pymoof's authenticate() returns silently even on failure.
-            # The first authenticated read below is what actually surfaces a
-            # bad key (as a BleakError).
+            # pymoof's authenticate() returns silently even on a bad key; the
+            # first authenticated read below is what actually surfaces it.
             await sx3.authenticate()
-            return await action(sx3)
+            result = await action(sx3)
         except BleakError as err:
-            raise UpdateFailed(f"BLE error talking to the bike: {err}") from err
+            # Failure *after* a successful connect. Usually a wrong key, but
+            # could be a one-off glitch, so only escalate to reauth once it
+            # keeps happening.
+            self._post_connect_failures += 1
+            if self._post_connect_failures >= _AUTH_FAILURE_THRESHOLD:
+                raise ConfigEntryAuthFailed(
+                    f"authentication failed (check the encryption key): {err}"
+                ) from err
+            raise UpdateFailed(f"BLE error after connecting: {err}") from err
+        else:
+            self._post_connect_failures = 0
+            return result
         finally:
             await client.disconnect()
 
