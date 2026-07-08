@@ -13,7 +13,7 @@ from homeassistant.components.bluetooth import (
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_ADDRESS
 
-from .const import CONF_KEY, CONF_USER_KEY_ID, DOMAIN
+from .const import CONF_KEY, CONF_USER_KEY_ID, DOMAIN, SX3_SERVICE_UUID
 
 
 class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -53,19 +53,34 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             return await self.async_step_credentials()
 
         current = self._async_current_ids()
-        devices: dict[str, str] = {}
+        bikes: dict[str, str] = {}
+        others: dict[str, str] = {}
         for info in async_discovered_service_info(self.hass, connectable=True):
             if info.address in current:
                 continue
-            devices[info.address] = f"{info.name or 'Unknown'} ({info.address})"
+            label = f"{info.name or 'Unknown'} ({info.address})"
+            if SX3_SERVICE_UUID in info.service_uuids:
+                bikes[info.address] = f"{info.name or 'VanMoof'} ({info.address})"
+            else:
+                others[info.address] = label
 
-        if devices:
-            schema = vol.Schema({vol.Required(CONF_ADDRESS): vol.In(devices)})
+        # Prefer the filtered VanMoof list. Only if nothing nearby advertises the
+        # bike service do we fall back to every device (so the user is never
+        # blocked, e.g. bike asleep / UUID not seen yet), plus a manual MAC field.
+        if bikes:
+            schema = vol.Schema({vol.Required(CONF_ADDRESS): vol.In(bikes)})
+        elif others:
+            schema = vol.Schema({vol.Required(CONF_ADDRESS): vol.In(others)})
         else:
-            # Nothing advertising right now: fall back to a manual MAC field.
             schema = vol.Schema({vol.Required(CONF_ADDRESS): str})
 
-        return self.async_show_form(step_id="user", data_schema=schema)
+        return self.async_show_form(
+            step_id="user",
+            data_schema=schema,
+            description_placeholders={
+                "found": "VanMoof bikes" if bikes else "no VanMoof detected"
+            },
+        )
 
     async def async_step_credentials(
         self, user_input: dict[str, Any] | None = None

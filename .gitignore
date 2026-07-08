@@ -5,8 +5,9 @@ __pycache__/
 .venv/
 venv/
 
-# Secrets — never commit real bike credentials
+# Secrets / throwaway helpers — never commit real bike credentials or key output
 scratch_probe.py
+get_keys.py
 secrets.*
 *.local
 

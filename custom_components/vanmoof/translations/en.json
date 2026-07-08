@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Select your VanMoof",
-        "description": "Pick the bike from the list of nearby Bluetooth devices, or enter its MAC address if it isn't listed.",
+        "description": "Detected: {found}. Pick your bike from the list. If it isn't shown, wake it (press a button on the bike) and reopen this dialog, or type its MAC address manually.",
         "data": {
           "address": "Bike"
         }
