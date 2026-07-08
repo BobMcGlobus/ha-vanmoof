@@ -24,13 +24,11 @@ class VanMoofEntity(CoordinatorEntity[VanMoofCoordinator]):
             connections={(CONNECTION_BLUETOOTH, coordinator.address)},
             identifiers={(DOMAIN, coordinator.address)},
             manufacturer="VanMoof",
-            model="S3 / X3",
+            model=coordinator.model or "S3 / X3",
             # Use the entry title so multiple bikes get distinct device names
             # (e.g. "ES3-F88A", "Fahrrad Lol") instead of all being "VanMoof".
             name=coordinator.entry.title,
-            serial_number=(
-                coordinator.data.frame_number if coordinator.data else None
-            ),
+            serial_number=coordinator.frame_number,
             sw_version=(
                 coordinator.data.bike_firmware if coordinator.data else None
             ),

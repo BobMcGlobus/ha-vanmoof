@@ -40,7 +40,9 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    CONF_FRAME_NUMBER,
     CONF_KEY,
+    CONF_MODEL,
     CONF_USER_KEY_ID,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
@@ -67,6 +69,8 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
         self._name: str | None = None
         self._key: str | None = None
         self._user_key_id: int | None = None
+        self._frame_number: str | None = None
+        self._model: str | None = None
         self._bikes: list[dict[str, Any]] = []
         # The account's macAddress is NOT the BLE advertising address, so it's
         # only used as a soft default in the picker, never as the real address.
@@ -139,6 +143,8 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
             key = bike.get("key") or {}
             self._key = key.get("encryptionKey")
             self._user_key_id = key.get("userKeyId")
+            self._frame_number = bike.get("frameNumber")
+            self._model = bike.get("modelName")
             self._name = self._name or bike.get("name") or bike.get("frameNumber")
 
             # From discovery the address is the real advertised one -> use it.
@@ -276,6 +282,8 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_ADDRESS: self._address,
                 CONF_KEY: self._key,
                 CONF_USER_KEY_ID: self._user_key_id,
+                CONF_FRAME_NUMBER: self._frame_number,
+                CONF_MODEL: self._model,
             },
         )
 

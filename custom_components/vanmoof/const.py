@@ -9,6 +9,10 @@ DOMAIN = "vanmoof"
 # CONF_ADDRESS is imported from homeassistant.const where needed.
 CONF_KEY = "key"
 CONF_USER_KEY_ID = "user_key_id"
+# Stored from the cloud account at setup (the BLE FRAME_NUMBER read returns
+# "Invalid Handle" on some firmware, so we don't rely on it).
+CONF_FRAME_NUMBER = "frame_number"
+CONF_MODEL = "model"
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,

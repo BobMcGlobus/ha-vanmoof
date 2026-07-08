@@ -25,7 +25,9 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import (
+    CONF_FRAME_NUMBER,
     CONF_KEY,
+    CONF_MODEL,
     CONF_USER_KEY_ID,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
@@ -61,6 +63,7 @@ class VanMoofData:
     module_battery: int | None = None
     bike_firmware: str | None = None
     has_error: bool = False
+    charging: bool | None = None
 
 
 class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
@@ -80,6 +83,9 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         self.address: str = entry.data[CONF_ADDRESS]
         self._key: str = entry.data[CONF_KEY]
         self._user_key_id: int = entry.data[CONF_USER_KEY_ID]
+        # From the cloud account at setup; the BLE read is unreliable.
+        self.frame_number: str | None = entry.data.get(CONF_FRAME_NUMBER)
+        self.model: str | None = entry.data.get(CONF_MODEL)
         self._post_connect_failures = 0
 
     async def _async_update_data(self) -> VanMoofData:
@@ -141,13 +147,16 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             speed_kmh=await sx3.get_speed(),
             lock_state=await sx3.get_lock_state(),
         )
+        # Frame number comes from the cloud account (BLE read is unreliable).
+        data.frame_number = self.frame_number
         # Optional reads: best-effort, never fail the poll (some characteristics
         # return "Invalid Handle" on certain firmware).
-        data.frame_number = await self._try_read(sx3.get_frame_number)
         data.module_battery = await self._try_read(sx3.get_module_battery_level)
         data.bike_firmware = await self._try_read(sx3.get_bike_firmware_version)
         errors = await self._try_read(sx3.get_errors)
         data.has_error = bool(errors and any(errors))
+        charging = await self._try_read(sx3.get_motor_battery_state)
+        data.charging = bool(charging) if charging is not None else None
         return data
 
     async def _try_read(

@@ -329,6 +329,13 @@ class SX3Client:
             self._bike_profile.BikeState.ERRORS,
         )
 
+    async def get_motor_battery_state(self) -> int:
+        """Motor/main battery state; 1 while charging, 0 otherwise."""
+        result = await self._read(
+            self._bike_profile.BikeInfo.MOTOR_BATTERY_STATE,
+        )
+        return int(result[0])
+
     async def get_bike_firmware_version(self) -> str:
         """Bike firmware version string, e.g. '1.09.03'."""
         result = await self._read(

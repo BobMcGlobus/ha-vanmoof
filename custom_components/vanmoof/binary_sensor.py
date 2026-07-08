@@ -30,7 +30,13 @@ async def async_setup_entry(
 ) -> None:
     """Set up the VanMoof binary sensors."""
     coordinator = entry.runtime_data
-    async_add_entities([VanMoofInRange(coordinator), VanMoofProblem(coordinator)])
+    async_add_entities(
+        [
+            VanMoofInRange(coordinator),
+            VanMoofProblem(coordinator),
+            VanMoofCharging(coordinator),
+        ]
+    )
 
 
 class VanMoofInRange(BinarySensorEntity):
@@ -111,3 +117,19 @@ class VanMoofProblem(VanMoofEntity, BinarySensorEntity):
         if (data := self.coordinator.data) is None:
             return None
         return data.has_error
+
+
+class VanMoofCharging(VanMoofEntity, BinarySensorEntity):
+    """On while the main battery is charging (MOTOR_BATTERY_STATE != 0)."""
+
+    _attr_device_class = BinarySensorDeviceClass.BATTERY_CHARGING
+
+    def __init__(self, coordinator: VanMoofCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.address}_charging"
+
+    @property
+    def is_on(self) -> bool | None:
+        if (data := self.coordinator.data) is None:
+            return None
+        return data.charging

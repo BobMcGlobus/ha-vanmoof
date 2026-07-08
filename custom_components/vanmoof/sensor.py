@@ -25,6 +25,9 @@ class VanMoofSensorDescription(SensorEntityDescription):
     """Describes a VanMoof sensor."""
 
     value_fn: Callable[[VanMoofData], StateType]
+    # Keep showing the last known value when a poll fails (bike out of range)
+    # instead of going unavailable — right for the monotonic odometer.
+    retain_when_stale: bool = False
 
 
 SENSORS: tuple[VanMoofSensorDescription, ...] = (
@@ -41,6 +44,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_fn=lambda data: data.distance_km,
+        retain_when_stale=True,
     ),
     VanMoofSensorDescription(
         key="speed",
@@ -94,5 +98,15 @@ class VanMoofSensor(VanMoofEntity, SensorEntity):
         self._attr_unique_id = f"{coordinator.address}_{description.key}"
 
     @property
+    def available(self) -> bool:
+        # Retained sensors (odometer) stay available with their last value even
+        # when a poll fails; others follow the coordinator.
+        if self.entity_description.retain_when_stale:
+            return self.coordinator.data is not None
+        return super().available
+
+    @property
     def native_value(self) -> StateType:
-        return self.entity_description.value_fn(self.coordinator.data)
+        if (data := self.coordinator.data) is None:
+            return None
+        return self.entity_description.value_fn(data)

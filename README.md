@@ -15,7 +15,8 @@ It exposes:
 - `binary_sensor.*` — **In range**: passive presence from BLE advertisements
   (any adapter/proxy), so it flips off shortly after the bike leaves range —
   handy for arrival and departure / theft automations, independent of polling.
-  **Problem**: on when the bike reports an error.
+  **Charging**: on while the main battery is charging. **Problem**: on when the
+  bike reports an error.
 
 Device info carries the frame number (serial) and firmware version.
 
