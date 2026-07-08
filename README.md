@@ -21,6 +21,8 @@ It exposes:
 - `button.*` — **Refresh**: forces an immediate poll instead of waiting for the
   interval (stays pressable even when the bike is currently unavailable).
   **Bell**: rings the bell/horn (opens a BLE session, so a few seconds' delay).
+- `select.*` — **Assist level** (0-4), **Light** (off/auto/on), **Bell tone**
+  (bell/boat/party).
 
 Device info carries the frame number (serial), model, and firmware version.
 

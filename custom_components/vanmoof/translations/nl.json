@@ -102,6 +102,27 @@
       "bell": {
         "name": "Bel"
       }
+    },
+    "select": {
+      "assist_level": {
+        "name": "Ondersteuningsniveau"
+      },
+      "light": {
+        "name": "Licht",
+        "state": {
+          "off": "Uit",
+          "auto": "Automatisch",
+          "on": "Aan"
+        }
+      },
+      "bell_tone": {
+        "name": "Beltoon",
+        "state": {
+          "bell": "Bel",
+          "boat": "Boot",
+          "party": "Party"
+        }
+      }
     }
   }
 }

@@ -92,6 +92,27 @@
         "name": "Bell"
       }
     },
+    "select": {
+      "assist_level": {
+        "name": "Assist level"
+      },
+      "light": {
+        "name": "Light",
+        "state": {
+          "off": "Off",
+          "auto": "Auto",
+          "on": "On"
+        }
+      },
+      "bell_tone": {
+        "name": "Bell tone",
+        "state": {
+          "bell": "Bell",
+          "boat": "Boat",
+          "party": "Party"
+        }
+      }
+    },
     "sensor": {
       "frame_number": {
         "name": "Frame number"

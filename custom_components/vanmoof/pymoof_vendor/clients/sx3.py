@@ -343,6 +343,33 @@ class SX3Client:
         )
         return int(result[0])
 
+    async def get_assist_level(self) -> int:
+        """Current power-assist level (0 = off)."""
+        result = await self._read(
+            self._bike_profile.Movement.POWER_LEVEL,
+        )
+        return int(result[0])
+
+    async def get_light_mode_value(self) -> int:
+        """Current light mode (raw value; mapping to off/auto/on TBD)."""
+        result = await self._read(
+            self._bike_profile.Light.LIGHT_MODE,
+        )
+        return int(result[0])
+
+    async def set_light_mode(self, mode: int) -> None:
+        await self._write(
+            self._bike_profile.Light.LIGHT_MODE,
+            [mode],
+        )
+
+    async def get_bell_tone(self) -> int:
+        """Current bell tone raw value (maps to BellTone)."""
+        result = await self._read(
+            self._bike_profile.Sound.BELL_SOUND,
+        )
+        return int(result[0])
+
     async def get_bike_firmware_version(self) -> str:
         """Bike firmware version string, e.g. '1.09.03'."""
         result = await self._read(

@@ -33,7 +33,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
 )
-from .pymoof_vendor.clients.sx3 import LockState, Sound, SX3Client
+from .pymoof_vendor.clients.sx3 import BellTone, LockState, Sound, SX3Client
 
 # Escalate to a reauth flow only after this many consecutive failures that
 # happen *after* a successful connection (a genuine bad key keeps failing; a
@@ -66,6 +66,9 @@ class VanMoofData:
     has_error: bool = False
     charging: bool | None = None
     gear: int | None = None
+    assist_level: int | None = None
+    light_mode: int | None = None
+    bell_tone: int | None = None
 
 
 class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
@@ -152,6 +155,9 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         errors = await self._try_read(sx3.get_errors)
         charging = await self._try_read(sx3.get_motor_battery_state)
         gear = await self._try_read(sx3.get_gear)
+        assist_level = await self._try_read(sx3.get_assist_level)
+        light_mode = await self._try_read(sx3.get_light_mode_value)
+        bell_tone = await self._try_read(sx3.get_bell_tone)
         # Battery last, with a re-read guard: the S3 reports a placeholder 100 %
         # for the first moment after waking, before the BMS reports the real SoC.
         # Reading it after the round-trips above, then re-reading if it's 100,
@@ -172,6 +178,9 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             has_error=bool(errors and any(errors)),
             charging=bool(charging) if charging is not None else None,
             gear=gear,
+            assist_level=assist_level,
+            light_mode=light_mode,
+            bell_tone=bell_tone,
         )
 
     async def _try_read(
@@ -196,3 +205,15 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
     async def async_ring_bell(self) -> None:
         """Ring the bell / horn once (opens a short-lived session to do it)."""
         await self._with_client(lambda sx3: sx3.play_sound(Sound.HORN_1))
+
+    async def async_set_assist(self, level: int) -> None:
+        await self._with_client(lambda sx3: sx3.set_power_level(level))
+        await self.async_request_refresh()
+
+    async def async_set_light_mode(self, mode: int) -> None:
+        await self._with_client(lambda sx3: sx3.set_light_mode(mode))
+        await self.async_request_refresh()
+
+    async def async_set_bell_tone(self, tone: BellTone) -> None:
+        await self._with_client(lambda sx3: sx3.set_bell_tone(tone))
+        await self.async_request_refresh()

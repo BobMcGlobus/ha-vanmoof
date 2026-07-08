@@ -102,6 +102,27 @@
       "bell": {
         "name": "Klingel"
       }
+    },
+    "select": {
+      "assist_level": {
+        "name": "Unterstützungsstufe"
+      },
+      "light": {
+        "name": "Licht",
+        "state": {
+          "off": "Aus",
+          "auto": "Automatik",
+          "on": "An"
+        }
+      },
+      "bell_tone": {
+        "name": "Klingelton",
+        "state": {
+          "bell": "Klingel",
+          "boat": "Boot",
+          "party": "Party"
+        }
+      }
     }
   }
 }
