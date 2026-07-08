@@ -6,7 +6,10 @@ async def get_characteristic(
     gatt_client: bleak.backends.client.BaseBleakClient,
     char_uuid,
 ) -> bleak.backends.characteristic.BleakGATTCharacteristic:
-    services = await gatt_client.get_services()
+    # Vendored change: modern bleak (what Home Assistant ships) removed the
+    # awaitable get_services(); services are populated on connect and exposed as
+    # the `.services` property (backed by bleak-retry-connector's cache here).
+    services = gatt_client.services
     service = services.get_service(char_uuid.SERVICE_UUID.value)
     return service.get_characteristic(char_uuid.value)
 
