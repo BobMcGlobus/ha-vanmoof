@@ -39,6 +39,10 @@ your VanMoof account; after that it's fully local.
 
 Translations: English, German, Dutch.
 
+## Screenshots
+
+![VanMoof device page in Home Assistant](docs/device.png)
+
 ## Supported hardware
 
 - ✅ **VanMoof S3 / X3** — supported and tested on real S3 hardware.
