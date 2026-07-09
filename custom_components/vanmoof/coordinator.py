@@ -37,9 +37,11 @@ from .const import (
 from .pymoof_vendor.clients.sx3 import BellTone, LockState, Sound, SX3Client
 
 # Escalate to a reauth flow only after this many consecutive failures that
-# happen *after* a successful connection (a genuine bad key keeps failing; a
-# one-off BLE glitch shouldn't nag the user to re-authenticate).
-_AUTH_FAILURE_THRESHOLD = 2
+# happen *after* a successful connection AND before the entry has ever polled
+# successfully. Set high so a flaky connection at setup (incomplete GATT
+# discovery, proxy contention) doesn't get mistaken for a bad key; a genuinely
+# wrong key keeps failing and still surfaces eventually.
+_AUTH_FAILURE_THRESHOLD = 5
 
 _LOGGER = logging.getLogger(__name__)
 

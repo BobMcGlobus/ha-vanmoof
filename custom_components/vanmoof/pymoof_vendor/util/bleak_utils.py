@@ -1,5 +1,6 @@
 import bleak.backends.characteristic
 import bleak.backends.client
+from bleak.exc import BleakError
 
 
 async def get_characteristic(
@@ -11,7 +12,18 @@ async def get_characteristic(
     # the `.services` property (backed by bleak-retry-connector's cache here).
     services = gatt_client.services
     service = services.get_service(char_uuid.SERVICE_UUID.value)
-    return service.get_characteristic(char_uuid.value)
+    # Vendored change: on a flaky (proxy) connection the GATT table can come up
+    # incomplete, so get_service()/get_characteristic() return None. Raise a
+    # BleakError instead of crashing with AttributeError, so the coordinator
+    # clears the cache and retries with a fresh discovery.
+    if service is None:
+        raise BleakError(
+            f"service {char_uuid.SERVICE_UUID.value} not found (incomplete GATT discovery)"
+        )
+    characteristic = service.get_characteristic(char_uuid.value)
+    if characteristic is None:
+        raise BleakError(f"characteristic {char_uuid.value} not found")
+    return characteristic
 
 
 async def write_to_characteristic(
