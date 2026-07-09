@@ -112,8 +112,43 @@ Known rough edges:
 - **The bike must be in range and awake during setup** — the MAC in your VanMoof
   account is *not* the BLE address it advertises on, so the integration uses the
   address it actually sees over the air.
-- **No brand icon yet** — the logo/icon lives in `home-assistant/brands`; see
-  [`brands/README.md`](brands/README.md) for the one-time submission.
+- **Icon needs HA ≥ 2026.3** — the integration ships its own brand images
+  (`custom_components/vanmoof/brand/`); older HA shows a placeholder.
+
+---
+
+## Distance per day / week / month / year
+
+The `distance` sensor is the bike's lifetime odometer (a `total_increasing`
+total). To get *distance today / this week / month / year*, use Home Assistant's
+built-in **Utility Meter** helper on it — that's the idiomatic, robust way
+(handles cycle resets, restarts, and time zones for you; no template sensors to
+maintain). The odometer keeps its last value when the bike is out of range, so
+the meters don't get gaps.
+
+**UI:** *Settings → Devices & Services → Helpers → + Create Helper → Utility
+Meter* → input `sensor.<bike>_distance`, pick a reset cycle (Daily), create.
+Repeat for Weekly, Monthly, Yearly.
+
+**YAML** (`configuration.yaml`):
+
+```yaml
+utility_meter:
+  vanmoof_distance_today:
+    source: sensor.es3_f88a_distance   # your odometer entity
+    cycle: daily
+  vanmoof_distance_week:
+    source: sensor.es3_f88a_distance
+    cycle: weekly
+  vanmoof_distance_month:
+    source: sensor.es3_f88a_distance
+    cycle: monthly
+  vanmoof_distance_year:
+    source: sensor.es3_f88a_distance
+    cycle: yearly
+```
+
+Weekly resets Monday, monthly/yearly on the 1st by default (tunable per meter).
 
 ---
 
