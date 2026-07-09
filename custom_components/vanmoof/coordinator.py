@@ -100,6 +100,11 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         # trigger reauth. Reauth stays reserved for a genuinely wrong key at
         # setup (before any success).
         self._had_success = False
+        # The bike accepts only one BLE connection at a time, and both the poll
+        # and one-off writes (lock, bell, selects, Refresh) open a session. This
+        # lock serialises them so we never open two connections at once (which
+        # the bike rejects with GATT "Unlikely error" / 133).
+        self._lock = asyncio.Lock()
 
     async def _async_update_data(self) -> VanMoofData:
         data = await self._with_client(self._read_all)
@@ -107,6 +112,13 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         return data
 
     async def _with_client(
+        self, action: Callable[[SX3Client], Awaitable[_T]]
+    ) -> _T:
+        """Serialise BLE sessions so only one connection is ever open."""
+        async with self._lock:
+            return await self._locked_with_client(action)
+
+    async def _locked_with_client(
         self, action: Callable[[SX3Client], Awaitable[_T]]
     ) -> _T:
         """Open a session, authenticate, run ``action``, always disconnect."""
