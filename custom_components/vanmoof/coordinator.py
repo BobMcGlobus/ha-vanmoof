@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
+import contextlib
 from dataclasses import dataclass
 from datetime import timedelta
 import logging
@@ -134,6 +135,13 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             await sx3.authenticate()
             result = await action(sx3)
         except BleakError as err:
+            # A stale cached GATT table (e.g. after the bike's smart module
+            # reboots) makes reads fail persistently with "Unlikely error"
+            # (ATT 0x0E) that a normal retry — or the Refresh button — can't fix,
+            # because HA caches the services on disk. Drop the cache so the next
+            # connect rediscovers the services.
+            with contextlib.suppress(Exception):
+                await client.clear_cache()
             # Failure *after* a successful connect. Usually a wrong key, but
             # could be a one-off glitch, so only escalate to reauth once it
             # keeps happening.
