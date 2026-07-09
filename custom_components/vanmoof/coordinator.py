@@ -92,9 +92,16 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         self.frame_number: str | None = entry.data.get(CONF_FRAME_NUMBER)
         self.model: str | None = entry.data.get(CONF_MODEL)
         self._post_connect_failures = 0
+        # Once a poll has ever succeeded, the key is proven correct, so later
+        # post-connect failures are transient (never a bad key) and must NOT
+        # trigger reauth. Reauth stays reserved for a genuinely wrong key at
+        # setup (before any success).
+        self._had_success = False
 
     async def _async_update_data(self) -> VanMoofData:
-        return await self._with_client(self._read_all)
+        data = await self._with_client(self._read_all)
+        self._had_success = True
+        return data
 
     async def _with_client(
         self, action: Callable[[SX3Client], Awaitable[_T]]
@@ -131,7 +138,13 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             # could be a one-off glitch, so only escalate to reauth once it
             # keeps happening.
             self._post_connect_failures += 1
-            if self._post_connect_failures >= _AUTH_FAILURE_THRESHOLD:
+            # Only a bike that has NEVER polled successfully can have a bad key;
+            # once proven, treat everything as transient (avoids false "auth
+            # expired" prompts from momentary BLE glitches).
+            if (
+                not self._had_success
+                and self._post_connect_failures >= _AUTH_FAILURE_THRESHOLD
+            ):
                 raise ConfigEntryAuthFailed(
                     f"authentication failed (check the encryption key): {err}"
                 ) from err
