@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import timedelta
+from typing import Literal
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -15,6 +17,7 @@ from homeassistant.const import EntityCategory, PERCENTAGE, UnitOfLength, UnitOf
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
+from homeassistant.util import dt as dt_util
 
 from .coordinator import VanMoofConfigEntry, VanMoofCoordinator, VanMoofData
 from .entity import VanMoofEntity
@@ -25,9 +28,11 @@ class VanMoofSensorDescription(SensorEntityDescription):
     """Describes a VanMoof sensor."""
 
     value_fn: Callable[[VanMoofData], StateType]
-    # Keep showing the last known value when a poll fails (bike out of range)
-    # instead of going unavailable — right for the monotonic odometer.
-    retain_when_stale: bool = False
+    # How long to keep showing the last value when polls fail (bike out of range):
+    #   None       -> follow the coordinator (unavailable on the first failed poll)
+    #   "forever"  -> always keep the last value (static/monotonic data)
+    #   timedelta  -> keep it for that long after the last successful poll
+    retain: Literal["forever"] | timedelta | None = None
 
 
 SENSORS: tuple[VanMoofSensorDescription, ...] = (
@@ -37,6 +42,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.battery,
+        retain=timedelta(hours=2),
     ),
     VanMoofSensorDescription(
         key="distance",
@@ -44,7 +50,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.TOTAL_INCREASING,
         value_fn=lambda data: data.distance_km,
-        retain_when_stale=True,
+        retain="forever",
     ),
     VanMoofSensorDescription(
         key="speed",
@@ -58,6 +64,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         translation_key="gear",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda data: data.gear,
+        retain=timedelta(hours=2),
     ),
     VanMoofSensorDescription(
         key="module_battery",
@@ -73,6 +80,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         translation_key="frame_number",
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.frame_number,
+        retain="forever",
     ),
 )
 
@@ -105,11 +113,18 @@ class VanMoofSensor(VanMoofEntity, SensorEntity):
 
     @property
     def available(self) -> bool:
-        # Retained sensors (odometer) stay available with their last value even
-        # when a poll fails; others follow the coordinator.
-        if self.entity_description.retain_when_stale:
-            return self.coordinator.data is not None
-        return super().available
+        retain = self.entity_description.retain
+        # No retention: follow the coordinator (unavailable when a poll fails).
+        if retain is None:
+            return super().available
+        if self.coordinator.data is None:
+            return False
+        # Fresh poll, or "forever": available.
+        if super().available or retain == "forever":
+            return True
+        # Bounded window: keep the last value only for `retain` past last success.
+        last = self.coordinator.last_success_time
+        return last is not None and dt_util.utcnow() - last <= retain
 
     @property
     def native_value(self) -> StateType:

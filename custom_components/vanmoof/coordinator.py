@@ -12,7 +12,7 @@ import asyncio
 from collections.abc import Awaitable, Callable
 import contextlib
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 from typing import TypeVar
 
@@ -25,6 +25,7 @@ from homeassistant.const import CONF_ADDRESS, CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_FRAME_NUMBER,
@@ -100,6 +101,10 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         # trigger reauth. Reauth stays reserved for a genuinely wrong key at
         # setup (before any success).
         self._had_success = False
+        # When the last poll succeeded; sensors use it to keep showing a stale
+        # value for a bounded window (e.g. battery/gear for 2h) before going
+        # unavailable.
+        self.last_success_time: datetime | None = None
         # The bike accepts only one BLE connection at a time, and both the poll
         # and one-off writes (lock, bell, selects, Refresh) open a session. This
         # lock serialises them so we never open two connections at once (which
@@ -109,6 +114,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
     async def _async_update_data(self) -> VanMoofData:
         data = await self._with_client(self._read_all)
         self._had_success = True
+        self.last_success_time = dt_util.utcnow()
         return data
 
     async def _with_client(
