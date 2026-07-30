@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Awaitable, Callable
-import contextlib
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -49,6 +48,14 @@ _LOGGER = logging.getLogger(__name__)
 _T = TypeVar("_T")
 
 type VanMoofConfigEntry = ConfigEntry[VanMoofCoordinator]
+
+
+class _StaleGattError(UpdateFailed):
+    """Post-connect failure after which the GATT cache was dropped.
+
+    Signals that retrying immediately is worthwhile, because the next connect
+    rediscovers the services instead of reusing a stale table.
+    """
 
 
 @dataclass
@@ -122,7 +129,13 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
     ) -> _T:
         """Serialise BLE sessions so only one connection is ever open."""
         async with self._lock:
-            return await self._locked_with_client(action)
+            try:
+                return await self._locked_with_client(action)
+            except _StaleGattError as err:
+                # The GATT cache was just dropped, so try again right away with a
+                # fresh discovery instead of staying broken until the next poll.
+                _LOGGER.debug("retrying with a fresh GATT discovery after: %s", err)
+                return await self._locked_with_client(action)
 
     async def _locked_with_client(
         self, action: Callable[[SX3Client], Awaitable[_T]]
@@ -160,8 +173,11 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             # (ATT 0x0E) that a normal retry — or the Refresh button — can't fix,
             # because HA caches the services on disk. Drop the cache so the next
             # connect rediscovers the services.
-            with contextlib.suppress(Exception):
-                await client.clear_cache()
+            try:
+                cleared = await client.clear_cache()
+                _LOGGER.debug("cleared GATT cache after error (ok=%s)", cleared)
+            except Exception as cache_err:  # noqa: BLE001 - best effort
+                _LOGGER.debug("could not clear the GATT cache: %s", cache_err)
             # Failure *after* a successful connect. Usually a wrong key, but
             # could be a one-off glitch, so only escalate to reauth once it
             # keeps happening.
@@ -176,7 +192,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
                 raise ConfigEntryAuthFailed(
                     f"authentication failed (check the encryption key): {err}"
                 ) from err
-            raise UpdateFailed(f"BLE error after connecting: {err}") from err
+            raise _StaleGattError(f"BLE error after connecting: {err}") from err
         else:
             self._post_connect_failures = 0
             return result

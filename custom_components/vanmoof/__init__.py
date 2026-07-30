@@ -11,8 +11,12 @@ from .coordinator import VanMoofConfigEntry, VanMoofCoordinator
 async def async_setup_entry(hass: HomeAssistant, entry: VanMoofConfigEntry) -> bool:
     """Set up VanMoof from a config entry."""
     coordinator = VanMoofCoordinator(hass, entry)
-    # Raises ConfigEntryNotReady (and retries setup) if the bike is unreachable.
-    await coordinator.async_config_entry_first_refresh()
+    # Deliberately NOT async_config_entry_first_refresh(): a bike is often out of
+    # range or asleep, and blocking setup on it would mean no entities at all —
+    # including the passive presence sensor and the Refresh button, which are
+    # exactly what you want when the bike isn't there. Refresh once (errors are
+    # logged, not raised); entities load unavailable and recover on a later poll.
+    await coordinator.async_refresh()
 
     entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

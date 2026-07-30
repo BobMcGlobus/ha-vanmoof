@@ -105,13 +105,18 @@ authenticate → read, and the battery / odometer / speed sensors + lock entity.
 
 Known rough edges:
 
-- **Wrong key** currently surfaces as a repeating `ConfigEntryNotReady` /
-  `UpdateFailed` retry loop rather than a clean auth error, because
-  `authenticate()` returns silently and only the first read raises. A
-  `ConfigEntryAuthFailed`-based reauth flow is the planned fix.
-- **The bike must be in range and awake during setup** — the MAC in your VanMoof
-  account is *not* the BLE address it advertises on, so the integration uses the
-  address it actually sees over the air.
+- **The bike must be in range and awake when you add it** — the MAC in your
+  VanMoof account is *not* the BLE address it advertises on, so the integration
+  uses the address it actually sees over the air. Afterwards the entry loads even
+  when the bike is away (entities show unavailable; presence and Refresh work).
+- **It's a single-connection device.** If the phone app (or anything else) holds
+  the connection, Home Assistant can't get in. After a lot of connect churn the
+  bike's module can also get stuck — symptoms are GATT `error=14 Unlikely error`
+  or `error=133` on every poll. The integration clears its service cache and
+  retries automatically; if it stays stuck, wake/ride the bike or power-cycle it
+  (and restart the ESPHome proxy if you use one).
+- **Active ESPHome proxies**: an ESP32-S3/C3 is noticeably flakier than a classic
+  ESP32 for *active* (connectable) proxying.
 - **Icon needs HA ≥ 2026.3** — the integration ships its own brand images
   (`custom_components/vanmoof/brand/`); older HA shows a placeholder.
 
