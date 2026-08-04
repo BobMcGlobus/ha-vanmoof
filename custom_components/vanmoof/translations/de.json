@@ -117,6 +117,9 @@
       },
       "gear": {
         "name": "Gang"
+      },
+      "last_update": {
+        "name": "Letzte Aktualisierung"
       }
     },
     "button": {

@@ -154,6 +154,9 @@
       },
       "gear": {
         "name": "Gear"
+      },
+      "last_update": {
+        "name": "Last update"
       }
     }
   }

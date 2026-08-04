@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Literal
 
 from homeassistant.components.sensor import (
@@ -16,6 +16,7 @@ from homeassistant.components.sensor import (
 from homeassistant.const import EntityCategory, PERCENTAGE, UnitOfLength, UnitOfSpeed
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.typing import StateType
 from homeassistant.util import dt as dt_util
 
@@ -41,6 +42,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         value_fn=lambda data: data.battery,
         retain=timedelta(hours=2),
     ),
@@ -49,6 +51,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         device_class=SensorDeviceClass.DISTANCE,
         native_unit_of_measurement=UnitOfLength.KILOMETERS,
         state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=1,
         value_fn=lambda data: data.distance_km,
         retain="forever",
     ),
@@ -57,12 +60,14 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         device_class=SensorDeviceClass.SPEED,
         native_unit_of_measurement=UnitOfSpeed.KILOMETERS_PER_HOUR,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         value_fn=lambda data: data.speed_kmh,
     ),
     VanMoofSensorDescription(
         key="gear",
         translation_key="gear",
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         value_fn=lambda data: data.gear,
         retain=timedelta(hours=2),
     ),
@@ -72,6 +77,7 @@ SENSORS: tuple[VanMoofSensorDescription, ...] = (
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=0,
         entity_category=EntityCategory.DIAGNOSTIC,
         value_fn=lambda data: data.module_battery,
     ),
@@ -92,9 +98,11 @@ async def async_setup_entry(
 ) -> None:
     """Set up VanMoof sensors from a config entry."""
     coordinator = entry.runtime_data
-    async_add_entities(
+    entities: list[SensorEntity] = [
         VanMoofSensor(coordinator, description) for description in SENSORS
-    )
+    ]
+    entities.append(VanMoofLastUpdateSensor(coordinator))
+    async_add_entities(entities)
 
 
 class VanMoofSensor(VanMoofEntity, SensorEntity):
@@ -131,3 +139,34 @@ class VanMoofSensor(VanMoofEntity, SensorEntity):
         if (data := self.coordinator.data) is None:
             return None
         return self.entity_description.value_fn(data)
+
+
+class VanMoofLastUpdateSensor(VanMoofEntity, RestoreEntity, SensorEntity):
+    """When the bike was last read successfully.
+
+    Deliberately always available — a sensor that tells you polling is failing is
+    useless if it goes unavailable exactly then. The value survives restarts, so
+    "last seen 14 hours ago" is still visible after a reboot.
+    """
+
+    _attr_translation_key = "last_update"
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: VanMoofCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.address}_last_update"
+        self._restored: datetime | None = None
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if (last := await self.async_get_last_state()) is not None:
+            self._restored = dt_util.parse_datetime(last.state)
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.last_success_time or self._restored
