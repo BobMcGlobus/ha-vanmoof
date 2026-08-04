@@ -47,8 +47,31 @@
         }
       },
       "reauth_confirm": {
-        "title": "VanMoof-authenticatie mislukt",
-        "description": "De fiets heeft de encryptiesleutel geweigerd. Voer een gecorrigeerde sleutel en user key id in.",
+        "title": "VanMoof opnieuw verifiëren",
+        "description": "Home Assistant kon zich niet bij de fiets authenticeren. Haal de sleutel opnieuw uit je VanMoof-account of voer hem handmatig in.",
+        "menu_options": {
+          "reauth_cloud": "Inloggen met mijn VanMoof-account (aanbevolen)",
+          "reauth_manual": "Encryptiesleutel handmatig invoeren"
+        }
+      },
+      "reauth_cloud": {
+        "title": "VanMoof-account",
+        "description": "Log in en de sleutel voor deze fiets wordt automatisch opnieuw opgehaald.",
+        "data": {
+          "username": "E-mail",
+          "password": "Wachtwoord"
+        }
+      },
+      "reauth_pick": {
+        "title": "Selecteer je fiets",
+        "description": "Kies de fiets waar dit item bij hoort.",
+        "data": {
+          "bike": "Fiets"
+        }
+      },
+      "reauth_manual": {
+        "title": "VanMoof-inloggegevens",
+        "description": "Voer de encryptiesleutel en user key id voor deze fiets in.",
         "data": {
           "key": "Encryptiesleutel",
           "user_key_id": "User key id"

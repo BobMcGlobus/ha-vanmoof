@@ -43,6 +43,12 @@ from .pymoof_vendor.clients.sx3 import BellTone, LockState, Sound, SX3Client
 # wrong key keeps failing and still surfaces eventually.
 _AUTH_FAILURE_THRESHOLD = 5
 
+# Back off polling after this many consecutive failed cycles, doubling the
+# interval up to the cap. Keeps a wedged bike from being hammered every few
+# minutes (which tends to keep it wedged) without giving up on it.
+_FAILURES_BEFORE_BACKOFF = 3
+_MAX_BACKOFF_INTERVAL = timedelta(minutes=60)
+
 _LOGGER = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
@@ -103,6 +109,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         self.frame_number: str | None = entry.data.get(CONF_FRAME_NUMBER)
         self.model: str | None = entry.data.get(CONF_MODEL)
         self._post_connect_failures = 0
+        self._failures = 0
         # Once a poll has ever succeeded, the key is proven correct, so later
         # post-connect failures are transient (never a bad key) and must NOT
         # trigger reauth. Reauth stays reserved for a genuinely wrong key at
@@ -119,10 +126,41 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         self._lock = asyncio.Lock()
 
     async def _async_update_data(self) -> VanMoofData:
-        data = await self._with_client(self._read_all)
+        try:
+            data = await self._with_client(self._read_all)
+        except Exception:
+            self._failures += 1
+            # Hammering a wedged module every few minutes tends to keep it wedged
+            # (and floods the log). After a few failures, poll progressively less
+            # often — the Refresh button still forces an immediate attempt.
+            if self._failures >= _FAILURES_BEFORE_BACKOFF:
+                self._back_off()
+            raise
+        self._failures = 0
         self._had_success = True
         self.last_success_time = dt_util.utcnow()
+        self._restore_interval()
         return data
+
+    def _configured_interval(self) -> timedelta:
+        return timedelta(
+            minutes=self.entry.options.get(
+                CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES
+            )
+        )
+
+    def _back_off(self) -> None:
+        current = self.update_interval or self._configured_interval()
+        backed_off = min(current * 2, _MAX_BACKOFF_INTERVAL)
+        if backed_off > current:
+            _LOGGER.debug("polling backed off to %s after failures", backed_off)
+            self.update_interval = backed_off
+
+    def _restore_interval(self) -> None:
+        configured = self._configured_interval()
+        if self.update_interval != configured:
+            _LOGGER.debug("polling restored to %s", configured)
+            self.update_interval = configured
 
     async def _with_client(
         self, action: Callable[[SX3Client], Awaitable[_T]]
@@ -163,41 +201,51 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
 
         try:
             sx3 = SX3Client(client, self._key, self._user_key_id)
-            # pymoof's authenticate() returns silently even on a bad key; the
-            # first authenticated read below is what actually surfaces it.
-            await sx3.authenticate()
-            result = await action(sx3)
-        except BleakError as err:
-            # A stale cached GATT table (e.g. after the bike's smart module
-            # reboots) makes reads fail persistently with "Unlikely error"
-            # (ATT 0x0E) that a normal retry — or the Refresh button — can't fix,
-            # because HA caches the services on disk. Drop the cache so the next
-            # connect rediscovers the services.
             try:
-                cleared = await client.clear_cache()
-                _LOGGER.debug("cleared GATT cache after error (ok=%s)", cleared)
-            except Exception as cache_err:  # noqa: BLE001 - best effort
-                _LOGGER.debug("could not clear the GATT cache: %s", cache_err)
-            # Failure *after* a successful connect. Usually a wrong key, but
-            # could be a one-off glitch, so only escalate to reauth once it
-            # keeps happening.
-            self._post_connect_failures += 1
-            # Only a bike that has NEVER polled successfully can have a bad key;
-            # once proven, treat everything as transient (avoids false "auth
-            # expired" prompts from momentary BLE glitches).
-            if (
-                not self._had_success
-                and self._post_connect_failures >= _AUTH_FAILURE_THRESHOLD
-            ):
-                raise ConfigEntryAuthFailed(
-                    f"authentication failed (check the encryption key): {err}"
-                ) from err
-            raise _StaleGattError(f"BLE error after connecting: {err}") from err
-        else:
+                # authenticate() reads the CHALLENGE characteristic for a nonce
+                # before the key is ever used to decrypt anything, so a failure
+                # here is a transport problem (stale GATT table, flaky proxy,
+                # module wedged), NEVER a wrong key. Don't count it as auth.
+                await sx3.authenticate()
+            except BleakError as err:
+                await self._clear_cache(client)
+                raise _StaleGattError(f"BLE error during handshake: {err}") from err
+
+            try:
+                result = await action(sx3)
+            except BleakError as err:
+                # Past the handshake: a bad key surfaces here (pymoof's
+                # authenticate() returns silently), but so does a one-off glitch.
+                await self._clear_cache(client)
+                self._post_connect_failures += 1
+                # Only a bike that has NEVER polled successfully can have a bad
+                # key; once proven, treat everything as transient.
+                if (
+                    not self._had_success
+                    and self._post_connect_failures >= _AUTH_FAILURE_THRESHOLD
+                ):
+                    raise ConfigEntryAuthFailed(
+                        f"authentication failed (check the encryption key): {err}"
+                    ) from err
+                raise _StaleGattError(f"BLE error after connecting: {err}") from err
+
             self._post_connect_failures = 0
             return result
         finally:
             await client.disconnect()
+
+    async def _clear_cache(self, client: BleakClientWithServiceCache) -> None:
+        """Drop the cached GATT table so the next connect rediscovers services.
+
+        A stale cache (e.g. after the bike's module reboots) makes every read
+        fail with "Unlikely error" (ATT 0x0E) that plain retries can't fix,
+        because Home Assistant caches the services on disk.
+        """
+        try:
+            cleared = await client.clear_cache()
+            _LOGGER.debug("cleared GATT cache after error (ok=%s)", cleared)
+        except Exception as cache_err:  # noqa: BLE001 - best effort
+            _LOGGER.debug("could not clear the GATT cache: %s", cache_err)
 
     async def _read_all(self, sx3: SX3Client) -> VanMoofData:
         # Core reads define success; if these fail it's a real error (surfaced

@@ -47,8 +47,31 @@
         }
       },
       "reauth_confirm": {
-        "title": "VanMoof authentication failed",
-        "description": "The bike rejected the encryption key. Enter a corrected key and user key id.",
+        "title": "Re-authenticate VanMoof",
+        "description": "Home Assistant couldn't authenticate with the bike. Fetch the key from your VanMoof account again, or enter it manually.",
+        "menu_options": {
+          "reauth_cloud": "Log in with my VanMoof account (recommended)",
+          "reauth_manual": "Enter the encryption key manually"
+        }
+      },
+      "reauth_cloud": {
+        "title": "VanMoof account",
+        "description": "Log in and the key for this bike is fetched again automatically.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_pick": {
+        "title": "Select your bike",
+        "description": "Pick the bike this entry belongs to.",
+        "data": {
+          "bike": "Bike"
+        }
+      },
+      "reauth_manual": {
+        "title": "VanMoof credentials",
+        "description": "Enter the encryption key and user key id for this bike.",
         "data": {
           "key": "Encryption key",
           "user_key_id": "User key id"

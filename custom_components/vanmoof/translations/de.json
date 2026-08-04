@@ -47,8 +47,31 @@
         }
       },
       "reauth_confirm": {
-        "title": "VanMoof-Authentifizierung fehlgeschlagen",
-        "description": "Das Fahrrad hat den Verschlüsselungsschlüssel abgelehnt. Gib einen korrigierten Schlüssel und die User-Key-ID ein.",
+        "title": "VanMoof erneut authentifizieren",
+        "description": "Home Assistant konnte sich nicht am Fahrrad authentifizieren. Hol den Schlüssel erneut aus deinem VanMoof-Konto oder gib ihn manuell ein.",
+        "menu_options": {
+          "reauth_cloud": "Mit meinem VanMoof-Konto anmelden (empfohlen)",
+          "reauth_manual": "Verschlüsselungsschlüssel manuell eingeben"
+        }
+      },
+      "reauth_cloud": {
+        "title": "VanMoof-Konto",
+        "description": "Melde dich an, dann wird der Schlüssel für dieses Fahrrad automatisch neu geholt.",
+        "data": {
+          "username": "E-Mail",
+          "password": "Passwort"
+        }
+      },
+      "reauth_pick": {
+        "title": "Fahrrad auswählen",
+        "description": "Wähle das Fahrrad, zu dem dieser Eintrag gehört.",
+        "data": {
+          "bike": "Fahrrad"
+        }
+      },
+      "reauth_manual": {
+        "title": "VanMoof-Zugangsdaten",
+        "description": "Gib den Verschlüsselungsschlüssel und die User-Key-ID für dieses Fahrrad ein.",
         "data": {
           "key": "Verschlüsselungsschlüssel",
           "user_key_id": "User-Key-ID"

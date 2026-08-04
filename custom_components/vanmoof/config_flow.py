@@ -226,6 +226,69 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_reauth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
+        """Offer the same two paths as initial setup, not just manual entry."""
+        return self.async_show_menu(
+            step_id="reauth_confirm",
+            menu_options=["reauth_cloud", "reauth_manual"],
+        )
+
+    async def async_step_reauth_cloud(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Re-fetch the key from the VanMoof account."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            try:
+                self._bikes = await async_get_bikes(
+                    self.hass,
+                    user_input[CONF_USERNAME],
+                    user_input[CONF_PASSWORD],
+                )
+            except VanMoofAuthError:
+                errors["base"] = "invalid_auth"
+            except VanMoofCloudError:
+                errors["base"] = "cannot_connect"
+            else:
+                # Match this entry's bike automatically where possible, so the
+                # user doesn't have to pick it again.
+                frame = self._get_reauth_entry().data.get(CONF_FRAME_NUMBER)
+                bike = next(
+                    (b for b in self._bikes if b.get("frameNumber") == frame), None
+                )
+                if bike is None and len(self._bikes) == 1:
+                    bike = self._bikes[0]
+                if bike is None:
+                    return await self.async_step_reauth_pick()
+                return self._update_key_from_bike(bike)
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_PASSWORD): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                ),
+            }
+        )
+        return self.async_show_form(
+            step_id="reauth_cloud", data_schema=schema, errors=errors
+        )
+
+    async def async_step_reauth_pick(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Several account bikes and no frame-number match: ask which one."""
+        if user_input is not None:
+            return self._update_key_from_bike(self._bikes[int(user_input["bike"])])
+
+        options = {str(i): bike_label(bike) for i, bike in enumerate(self._bikes)}
+        return self.async_show_form(
+            step_id="reauth_pick",
+            data_schema=vol.Schema({vol.Required("bike"): vol.In(options)}),
+        )
+
+    async def async_step_reauth_manual(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Let the user supply a corrected encryption key + user key id."""
         if user_input is not None:
             return self.async_update_reload_and_abort(
@@ -242,8 +305,19 @@ class VanMoofConfigFlow(ConfigFlow, domain=DOMAIN):
                 vol.Required(CONF_USER_KEY_ID): vol.Coerce(int),
             }
         )
-        return self.async_show_form(
-            step_id="reauth_confirm", data_schema=schema
+        return self.async_show_form(step_id="reauth_manual", data_schema=schema)
+
+    def _update_key_from_bike(self, bike: dict[str, Any]) -> ConfigFlowResult:
+        """Write the account's key for ``bike`` onto the reauthenticating entry."""
+        key = bike.get("key") or {}
+        return self.async_update_reload_and_abort(
+            self._get_reauth_entry(),
+            data_updates={
+                CONF_KEY: key.get("encryptionKey"),
+                CONF_USER_KEY_ID: key.get("userKeyId"),
+                CONF_FRAME_NUMBER: bike.get("frameNumber"),
+                CONF_MODEL: bike.get("modelName"),
+            },
         )
 
     # --- helpers -------------------------------------------------------------
