@@ -33,3 +33,19 @@ SX3_SERVICE_UUID = "6acc5540-e631-4069-944d-b8ca7598ad50"
 DEFAULT_SCAN_INTERVAL_MINUTES = 5
 MIN_SCAN_INTERVAL_MINUTES = 1
 MAX_SCAN_INTERVAL_MINUTES = 180
+
+# Polling and presence pull in opposite directions: while we hold a connection to
+# read the battery, the bike stops advertising, which can make the "In range"
+# sensor flap. This option picks which side to favour.
+CONF_PRIORITY = "priority"
+PRIORITY_BATTERY = "battery"
+PRIORITY_PRESENCE = "presence"
+DEFAULT_PRIORITY = PRIORITY_BATTERY
+PRIORITIES = [PRIORITY_BATTERY, PRIORITY_PRESENCE]
+
+# How long the bike may stop advertising before "In range" turns off. Longer
+# hides brief dropouts (smooth presence, slower departure detection).
+PRESENCE_GRACE_SECONDS = {
+    PRIORITY_BATTERY: 300,
+    PRIORITY_PRESENCE: 0,
+}

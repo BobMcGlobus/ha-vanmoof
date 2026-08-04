@@ -91,10 +91,19 @@
     "step": {
       "init": {
         "title": "VanMoof options",
-        "description": "How often to poll the bike over Bluetooth (in minutes). Lower is fresher but uses more radio and bike battery; locking/unlocking always connects immediately regardless of this.",
+        "description": "How often to poll the bike over Bluetooth (in minutes). Lower is fresher but uses more radio and bike battery; locking/unlocking always connects immediately regardless of this.\n\nReading the bike requires a connection, and while connected it stops advertising — which can briefly look like it left. Pick which side to favour.",
         "data": {
-          "scan_interval": "Polling interval (minutes)"
+          "scan_interval": "Polling interval (minutes)",
+          "priority": "What matters more"
         }
+      }
+    }
+  },
+  "selector": {
+    "priority": {
+      "options": {
+        "battery": "Battery and sensor readings (steady presence, departure detected after a few minutes)",
+        "presence": "Fast departure detection (presence reacts immediately, may briefly drop out)"
       }
     }
   },

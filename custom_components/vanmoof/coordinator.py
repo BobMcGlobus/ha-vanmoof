@@ -30,9 +30,12 @@ from .const import (
     CONF_FRAME_NUMBER,
     CONF_KEY,
     CONF_MODEL,
+    CONF_PRIORITY,
     CONF_USER_KEY_ID,
+    DEFAULT_PRIORITY,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
+    PRESENCE_GRACE_SECONDS,
 )
 from .pymoof_vendor.clients.sx3 import BellTone, LockState, Sound, SX3Client
 
@@ -124,6 +127,9 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         # lock serialises them so we never open two connections at once (which
         # the bike rejects with GATT "Unlikely error" / 133).
         self._lock = asyncio.Lock()
+        # True while a BLE session is open. The bike stops advertising while it
+        # is connected, so the presence sensor must not read that as "gone".
+        self.connection_active = False
 
     async def _async_update_data(self) -> VanMoofData:
         try:
@@ -141,6 +147,14 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
         self.last_success_time = dt_util.utcnow()
         self._restore_interval()
         return data
+
+    @property
+    def presence_grace_seconds(self) -> int:
+        """How long the bike may go quiet before presence turns off."""
+        priority = self.entry.options.get(CONF_PRIORITY, DEFAULT_PRIORITY)
+        return PRESENCE_GRACE_SECONDS.get(
+            priority, PRESENCE_GRACE_SECONDS[DEFAULT_PRIORITY]
+        )
 
     def _configured_interval(self) -> timedelta:
         return timedelta(
@@ -199,6 +213,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             # cycle; don't count it against authentication.
             raise UpdateFailed(f"couldn't connect to the bike: {err}") from err
 
+        self.connection_active = True
         try:
             sx3 = SX3Client(client, self._key, self._user_key_id)
             try:
@@ -233,6 +248,7 @@ class VanMoofCoordinator(DataUpdateCoordinator[VanMoofData]):
             return result
         finally:
             await client.disconnect()
+            self.connection_active = False
 
     async def _clear_cache(self, client: BleakClientWithServiceCache) -> None:
         """Drop the cached GATT table so the next connect rediscovers services.

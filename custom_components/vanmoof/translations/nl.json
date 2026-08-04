@@ -91,9 +91,10 @@
     "step": {
       "init": {
         "title": "VanMoof-opties",
-        "description": "Hoe vaak de fiets via Bluetooth wordt uitgelezen (in minuten). Lager is actueler, maar kost meer radio en fietsaccu; vergrendelen/ontgrendelen maakt altijd meteen verbinding, ongeacht deze instelling.",
+        "description": "Hoe vaak de fiets via Bluetooth wordt uitgelezen (in minuten). Lager is actueler, maar kost meer radio en fietsaccu; vergrendelen/ontgrendelen maakt altijd meteen verbinding, ongeacht deze instelling.\n\nUitlezen vereist een verbinding, en tijdens die verbinding zendt de fiets niet — dat lijkt even alsof hij weg is. Kies wat je belangrijker vindt.",
         "data": {
-          "scan_interval": "Uitleesinterval (minuten)"
+          "scan_interval": "Uitleesinterval (minuten)",
+          "priority": "Wat is belangrijker"
         }
       }
     }
@@ -145,6 +146,14 @@
           "boat": "Boot",
           "party": "Party"
         }
+      }
+    }
+  },
+  "selector": {
+    "priority": {
+      "options": {
+        "battery": "Accu- en sensorwaarden (rustige aanwezigheid, vertrek na een paar minuten gedetecteerd)",
+        "presence": "Snelle vertrekdetectie (aanwezigheid reageert direct, kan kort wegvallen)"
       }
     }
   }

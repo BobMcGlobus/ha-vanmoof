@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from homeassistant.components import bluetooth
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
@@ -14,9 +16,10 @@ from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
 )
 from homeassistant.const import EntityCategory
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 
 from .const import DOMAIN
 from .coordinator import VanMoofConfigEntry, VanMoofCoordinator
@@ -55,7 +58,9 @@ class VanMoofInRange(BinarySensorEntity):
     _attr_should_poll = False
 
     def __init__(self, coordinator: VanMoofCoordinator) -> None:
+        self._coordinator = coordinator
         self._address = coordinator.address
+        self._unsub_grace: CALLBACK_TYPE | None = None
         self._attr_unique_id = f"{coordinator.address}_in_range"
         self._attr_device_info = DeviceInfo(
             connections={(CONNECTION_BLUETOOTH, coordinator.address)},
@@ -67,6 +72,7 @@ class VanMoofInRange(BinarySensorEntity):
         self._attr_is_on = bluetooth.async_address_present(
             self.hass, self._address, connectable=False
         )
+        self.async_on_remove(self._cancel_grace)
         self.async_on_remove(
             bluetooth.async_register_callback(
                 self.hass,
@@ -90,15 +96,49 @@ class VanMoofInRange(BinarySensorEntity):
     def _async_seen(
         self, service_info: BluetoothServiceInfoBleak, change: BluetoothChange
     ) -> None:
+        self._cancel_grace()
         if self._attr_is_on is not True:
             self._attr_is_on = True
             self.async_write_ha_state()
 
     @callback
     def _async_unavailable(self, service_info: BluetoothServiceInfoBleak) -> None:
+        # While we hold a connection the bike stops advertising — that's us, not
+        # the bike leaving.
+        if self._coordinator.connection_active:
+            return
+        grace = self._coordinator.presence_grace_seconds
+        if grace <= 0:
+            self._set_away()
+            return
+        # Wait out brief dropouts before declaring the bike gone.
+        if self._unsub_grace is None:
+            self._unsub_grace = async_call_later(
+                self.hass, grace, self._async_grace_elapsed
+            )
+
+    @callback
+    def _async_grace_elapsed(self, _now: datetime) -> None:
+        self._unsub_grace = None
+        if self._coordinator.connection_active:
+            return
+        if bluetooth.async_address_present(
+            self.hass, self._address, connectable=False
+        ):
+            return  # it came back within the grace period
+        self._set_away()
+
+    @callback
+    def _set_away(self) -> None:
         if self._attr_is_on is not False:
             self._attr_is_on = False
             self.async_write_ha_state()
+
+    @callback
+    def _cancel_grace(self) -> None:
+        if self._unsub_grace is not None:
+            self._unsub_grace()
+            self._unsub_grace = None
 
 
 class VanMoofProblem(VanMoofEntity, BinarySensorEntity):

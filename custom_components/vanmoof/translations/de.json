@@ -91,9 +91,10 @@
     "step": {
       "init": {
         "title": "VanMoof-Optionen",
-        "description": "Wie oft das Fahrrad per Bluetooth abgefragt wird (in Minuten). Niedriger ist aktueller, kostet aber mehr Funk und Fahrrad-Akku; Auf-/Abschließen verbindet immer sofort, unabhängig davon.",
+        "description": "Wie oft das Fahrrad per Bluetooth abgefragt wird (in Minuten). Niedriger ist aktueller, kostet aber mehr Funk und Fahrrad-Akku; Auf-/Abschließen verbindet immer sofort, unabhängig davon.\n\nZum Auslesen ist eine Verbindung nötig, und währenddessen funkt das Fahrrad nicht — das sieht kurz so aus, als wäre es weg. Wähle, was dir wichtiger ist.",
         "data": {
-          "scan_interval": "Abfrageintervall (Minuten)"
+          "scan_interval": "Abfrageintervall (Minuten)",
+          "priority": "Was ist wichtiger"
         }
       }
     }
@@ -145,6 +146,14 @@
           "boat": "Boot",
           "party": "Party"
         }
+      }
+    }
+  },
+  "selector": {
+    "priority": {
+      "options": {
+        "battery": "Akku- und Sensorwerte (ruhige Anwesenheit, Verlassen wird nach ein paar Minuten erkannt)",
+        "presence": "Schnelle Verlassen-Erkennung (Anwesenheit reagiert sofort, kann kurz aussetzen)"
       }
     }
   }

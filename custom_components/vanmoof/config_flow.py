@@ -34,6 +34,9 @@ from homeassistant.const import (
 )
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
@@ -43,11 +46,14 @@ from .const import (
     CONF_FRAME_NUMBER,
     CONF_KEY,
     CONF_MODEL,
+    CONF_PRIORITY,
     CONF_USER_KEY_ID,
+    DEFAULT_PRIORITY,
     DEFAULT_SCAN_INTERVAL_MINUTES,
     DOMAIN,
     MAX_SCAN_INTERVAL_MINUTES,
     MIN_SCAN_INTERVAL_MINUTES,
+    PRIORITIES,
     SX3_SERVICE_UUID,
 )
 from .vanmoof_cloud import (
@@ -371,18 +377,31 @@ class VanMoofOptionsFlow(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        current = self.config_entry.options.get(
-            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES
-        )
+        options = self.config_entry.options
         schema = vol.Schema(
             {
-                vol.Required(CONF_SCAN_INTERVAL, default=current): vol.All(
+                vol.Required(
+                    CONF_SCAN_INTERVAL,
+                    default=options.get(
+                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MINUTES
+                    ),
+                ): vol.All(
                     vol.Coerce(int),
                     vol.Range(
                         min=MIN_SCAN_INTERVAL_MINUTES,
                         max=MAX_SCAN_INTERVAL_MINUTES,
                     ),
-                )
+                ),
+                vol.Required(
+                    CONF_PRIORITY,
+                    default=options.get(CONF_PRIORITY, DEFAULT_PRIORITY),
+                ): SelectSelector(
+                    SelectSelectorConfig(
+                        options=PRIORITIES,
+                        translation_key="priority",
+                        mode=SelectSelectorMode.LIST,
+                    )
+                ),
             }
         )
         return self.async_show_form(step_id="init", data_schema=schema)
