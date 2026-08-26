@@ -15,12 +15,15 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import logging
 from typing import Any
 
-from aiohttp import ClientError
+from aiohttp import ClientError, ClientSession
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
+
+_LOGGER = logging.getLogger(__name__)
 
 API_URL = "https://my.vanmoof.com/api/v8"
 # Shipped in the official VanMoof app; per pymoof it's the same for every user.
@@ -45,9 +48,20 @@ async def async_get_bikes(
     Each bike dict includes at least ``name``/``frameNumber`` and a ``key`` with
     ``encryptionKey`` + ``userKeyId``; ``macAddress`` when the API provides it.
     """
-    session = async_get_clientsession(hass)
+    # A dedicated session (own cookie jar) rather than Home Assistant's shared
+    # one: this is a one-shot login and must not pick up or leave session state
+    # belonging to other integrations. Closed again below.
+    session = async_create_clientsession(hass, auto_cleanup=False)
     basic = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
 
+    try:
+        return await _async_fetch_bikes(session, basic)
+    finally:
+        await session.close()
+
+
+async def _async_fetch_bikes(session: ClientSession, basic: str) -> list[dict[str, Any]]:
+    """Authenticate and read the account's bikes."""
     try:
         async with asyncio.timeout(_TIMEOUT):
             async with session.post(
@@ -80,6 +94,13 @@ async def async_get_bikes(
     bikes = (data.get("data") or {}).get("bikeDetails") if isinstance(data, dict) else None
     if not bikes:
         raise VanMoofCloudError(f"no bikes in account data: {data}")
+    # The account list comes straight from the API on every login; log what it
+    # returned so a stale/incomplete list can be told apart from a UI problem.
+    _LOGGER.debug(
+        "VanMoof account returned %d bike(s): %s",
+        len(bikes),
+        [(b.get("name"), b.get("frameNumber")) for b in bikes],
+    )
     return bikes
 
 
