@@ -21,7 +21,7 @@ from typing import Any
 from aiohttp import ClientError, ClientSession
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,19 +48,14 @@ async def async_get_bikes(
     Each bike dict includes at least ``name``/``frameNumber`` and a ``key`` with
     ``encryptionKey`` + ``userKeyId``; ``macAddress`` when the API provides it.
     """
-    # A dedicated session (own cookie jar) rather than Home Assistant's shared
-    # one: this is a one-shot login and must not pick up or leave session state
-    # belonging to other integrations. Closed again below.
-    session = async_create_clientsession(hass, auto_cleanup=False)
+    session = async_get_clientsession(hass)
     basic = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
-
-    try:
-        return await _async_fetch_bikes(session, basic)
-    finally:
-        await session.close()
+    return await _async_fetch_bikes(session, basic)
 
 
-async def _async_fetch_bikes(session: ClientSession, basic: str) -> list[dict[str, Any]]:
+async def _async_fetch_bikes(
+    session: ClientSession, basic: str
+) -> list[dict[str, Any]]:
     """Authenticate and read the account's bikes."""
     try:
         async with asyncio.timeout(_TIMEOUT):
