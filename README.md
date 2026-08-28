@@ -89,12 +89,18 @@ not stored.
 **2. Enter the key manually.** Choose *"Enter the encryption key manually"*, pick
 the bike from the nearby-device list (or paste its MAC), then enter the
 `encryptionKey` (hex → **Encryption key**) and `userKeyId` (int → **User key
-id**). Get these however you like — e.g. offline from the bike.
+id**), however you obtained them.
 
 **Caveat (post-bankruptcy):** VanMoof's servers changed hands (Lavoie), so the
-account login may be flaky or gone. If it fails, use manual entry with keys
-extracted offline via [`chwdt/vanmoof-tools`](https://github.com/chwdt/vanmoof-tools)
-(dumps the keys stored on the bike over BLE).
+account API can be flaky — and it is known to serve a **stale bike list**: a
+recently added bike may be missing while removed ones still appear, even though
+the web account shows the correct bikes (see
+[#1](https://github.com/BobMcGlobus/ha-vanmoof/issues/1)). Every tool that reads
+`my.vanmoof.com/api/v8/getCustomerData` is affected the same way, so a second
+key-export tool will not help. If your bike is missing there, the key has to come
+from somewhere else; note that
+[`chwdt/vanmoof-tools`](https://github.com/chwdt/vanmoof-tools) is a
+firmware-level reverse-engineering toolkit, not a ready-made key exporter.
 
 ---
 
