@@ -6,9 +6,11 @@ owner's VanMoof account, so the user doesn't have to run a script by hand.
 Only the read-only account endpoints are used. Runs on Home Assistant's shared
 aiohttp session (no blocking I/O in the event loop).
 
-Post-bankruptcy caveat: the my.vanmoof.com API changed hands (Lavoie) and may be
-unreliable or disappear. Callers should handle VanMoofCloudError and fall back to
-manual key entry / offline extraction (chwdt/vanmoof-tools).
+Post-bankruptcy caveat: this legacy v8 API changed hands (Lavoie) and is
+degrading — it has been seen returning a stale bike list, and an empty one (see
+issue #1), while the newer web portal shows the correct bikes but appears not to
+expose encryption keys at all. Callers must handle VanMoofCloudError and fall
+back to manual key entry.
 """
 
 from __future__ import annotations

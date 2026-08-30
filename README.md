@@ -70,37 +70,54 @@ of the two setup paths below.
 
 ## Setup: getting the encryption key + user key id
 
-The config flow offers two ways. Either way, once set up the integration is
-**fully local** — the cloud is only touched (optionally) during setup.
+The integration needs two values per bike, an `encryptionKey` and a `userKeyId`.
+It only needs them **once, at setup** — afterwards everything runs over Bluetooth
+and the cloud is never contacted again.
 
-**1. Log in with your VanMoof account (recommended).** Choose *"Log in with my
-VanMoof account"*, enter your VanMoof email + password, and pick the bike. The
-`encryptionKey` and `userKeyId` are read from your account automatically; you
-then pick the bike from the nearby-device list. Credentials are used once and
-not stored.
+The config flow offers two ways to supply them.
 
-> The bike must be **in Bluetooth range and awake** during setup: the MAC stored
-> in your VanMoof account is *not* the address the bike advertises on, so the
-> integration connects using the address it actually sees over the air. Easiest
-> path for an in-range bike is to let **auto-discovery** find it and pick the
-> account login for the key. A bike that's out of range (e.g. in the cellar)
-> can't be set up until it's nearby.
+### 1. Log in with your VanMoof account
 
-**2. Enter the key manually.** Choose *"Enter the encryption key manually"*, pick
-the bike from the nearby-device list (or paste its MAC), then enter the
-`encryptionKey` (hex → **Encryption key**) and `userKeyId` (int → **User key
-id**), however you obtained them.
+Convenient when it works: choose *"Log in with my VanMoof account"*, enter your
+VanMoof email + password, pick the bike, and the keys are fetched for you.
+Credentials are used once and not stored.
 
-**Caveat (post-bankruptcy):** VanMoof's servers changed hands (Lavoie), so the
-account API can be flaky — and it is known to serve a **stale bike list**: a
-recently added bike may be missing while removed ones still appear, even though
-the web account shows the correct bikes (see
-[#1](https://github.com/BobMcGlobus/ha-vanmoof/issues/1)). Every tool that reads
-`my.vanmoof.com/api/v8/getCustomerData` is affected the same way, so a second
-key-export tool will not help. If your bike is missing there, the key has to come
-from somewhere else; note that
+Be aware this depends on VanMoof's legacy `v8` API, which is visibly decaying
+since the company changed hands (Lavoie). It is known to return a **stale bike
+list** — a recently added bike missing while removed ones still appear — and at
+least one user now gets an **empty list** from it, while the web account shows
+the correct bikes ([#1](https://github.com/BobMcGlobus/ha-vanmoof/issues/1)).
+Every tool reading `my.vanmoof.com/api/v8/getCustomerData` is affected
+identically, so reaching for a second key-export tool won't help. The newer web
+portal (`www.vanmoof.com/my-vanmoof/…`) does list bikes correctly, but as far as
+I can tell it doesn't expose the encryption keys at all, so it isn't a
+replacement.
+
+**Already set up bikes are not affected by any of this.** Their keys live in the
+config entry, and nothing re-fetches them.
+
+### 2. Enter the key manually
+
+The path that doesn't depend on VanMoof's servers, and the one to use if the
+account login can't see your bike. Choose *"Enter the encryption key manually"*,
+pick the bike from the nearby-device list (or paste its MAC), then enter the
+`encryptionKey` (hex) and `userKeyId` (int), however you obtained them.
+
+If your bike is missing from the account API, the key has to come from somewhere
+else — note that
 [`chwdt/vanmoof-tools`](https://github.com/chwdt/vanmoof-tools) is a
-firmware-level reverse-engineering toolkit, not a ready-made key exporter.
+firmware-level reverse-engineering toolkit (dumping/patching bike firmware), not
+a ready-made key exporter. If you know of a working way to read the key off an
+S3 over BLE, please open an issue; it would make this integration a lot more
+future-proof.
+
+### Either way
+
+The bike must be **in Bluetooth range and awake** during setup: the MAC stored in
+your VanMoof account is *not* the address the bike advertises on, so the
+integration connects using the address it actually sees over the air. Easiest
+path is to let **auto-discovery** find an in-range bike and then supply the key.
+A bike that's out of range (e.g. in the cellar) can't be set up until it's nearby.
 
 ---
 
