@@ -83,15 +83,21 @@ VanMoof email + password, pick the bike, and the keys are fetched for you.
 Credentials are used once and not stored.
 
 Be aware this depends on VanMoof's legacy `v8` API, which is visibly decaying
-since the company changed hands (Lavoie). It is known to return a **stale bike
-list** — a recently added bike missing while removed ones still appear — and at
-least one user now gets an **empty list** from it, while the web account shows
-the correct bikes ([#1](https://github.com/BobMcGlobus/ha-vanmoof/issues/1)).
-Every tool reading `my.vanmoof.com/api/v8/getCustomerData` is affected
-identically, so reaching for a second key-export tool won't help. The newer web
-portal (`www.vanmoof.com/my-vanmoof/…`) does list bikes correctly, but as far as
-I can tell it doesn't expose the encryption keys at all, so it isn't a
-replacement.
+since the company changed hands (Lavoie). Its old host, `my.vanmoof.com/api/v8`,
+no longer resolves at all; since **v0.16.3** the integration uses
+`api.vanmoof-api.com/v8`, which serves the same API from VanMoof's own backend
+(thanks [@computerd36](https://github.com/computerd36),
+[#2](https://github.com/BobMcGlobus/ha-vanmoof/pull/2)). Older versions can't
+log in anymore.
+
+The API is also known to return a **stale bike list** — a recently added bike
+missing while removed ones still appear — and at least one user got an **empty
+list** from it, while the web account shows the correct bikes
+([#1](https://github.com/BobMcGlobus/ha-vanmoof/issues/1)). Other key-export
+tools reading the same `getCustomerData` endpoint are affected identically, so
+reaching for a second one won't help. The newer web portal
+(`www.vanmoof.com/my-vanmoof/…`) does list bikes correctly, but as far as I can
+tell it doesn't expose the encryption keys at all, so it isn't a replacement.
 
 **Already set up bikes are not affected by any of this.** Their keys live in the
 config entry, and nothing re-fetches them.

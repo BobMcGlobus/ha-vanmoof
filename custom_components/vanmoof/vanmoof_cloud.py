@@ -7,10 +7,11 @@ Only the read-only account endpoints are used. Runs on Home Assistant's shared
 aiohttp session (no blocking I/O in the event loop).
 
 Post-bankruptcy caveat: this legacy v8 API changed hands (Lavoie) and is
-degrading — it has been seen returning a stale bike list, and an empty one (see
-issue #1), while the newer web portal shows the correct bikes but appears not to
-expose encryption keys at all. Callers must handle VanMoofCloudError and fall
-back to manual key entry.
+degrading. Its old host, my.vanmoof.com/api/v8, no longer resolves; the same API
+is served from api.vanmoof-api.com/v8 (PR #2). It has been seen returning a
+stale bike list, and an empty one (see issue #1), while the newer web portal
+shows the correct bikes but appears not to expose encryption keys at all.
+Callers must handle VanMoofCloudError and fall back to manual key entry.
 """
 
 from __future__ import annotations
