@@ -27,7 +27,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 _LOGGER = logging.getLogger(__name__)
 
-API_URL = "https://my.vanmoof.com/api/v8"
+API_URL = "https://api.vanmoof-api.com/v8"
 # Shipped in the official VanMoof app; per pymoof it's the same for every user.
 API_KEY = "fcb38d47-f14b-30cf-843b-26283f6a5819"
 
